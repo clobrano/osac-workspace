@@ -364,10 +364,10 @@ PRD, Design, Epics, Stories, and code PRs</li>
 cluster-tool connect myserver --host root@server    <span class="hljs-comment"># Connect to baremetal</span>
 
 <span class="hljs-comment"># Pull a flavor (~10-15 min, once per server)</span>
-cluster-tool pull quay.io/rh-ee-ovishlit/cluster-flavors:vmaas-helm
+cluster-tool pull quay.io/rh-ee-ovishlit/cluster-flavors:vmaas
 
 <span class="hljs-comment"># Boot a cluster (~5 min)</span>
-cluster-tool boot --flavor vmaas-helm --name dev
+cluster-tool boot --flavor vmaas --name dev
 
 <span class="hljs-comment"># Use it</span>
 <span class="hljs-built_in">export</span> KUBECONFIG=~/.kube/dev.kubeconfig

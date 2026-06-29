@@ -394,10 +394,10 @@ sudo cluster-tool setup client                     # DNS on laptop
 cluster-tool connect myserver --host root@server    # Connect to baremetal
 
 # Pull a flavor (~10-15 min, once per server)
-cluster-tool pull quay.io/rh-ee-ovishlit/cluster-flavors:vmaas-helm
+cluster-tool pull quay.io/rh-ee-ovishlit/cluster-flavors:vmaas
 
 # Boot a cluster (~5 min)
-cluster-tool boot --flavor vmaas-helm --name dev
+cluster-tool boot --flavor vmaas --name dev
 
 # Use it
 export KUBECONFIG=~/.kube/dev.kubeconfig
