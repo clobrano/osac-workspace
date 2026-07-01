@@ -138,7 +138,7 @@ for repo in <selected repos>; do
     upstream_url=$(git -C "$path" remote get-url upstream 2>/dev/null || true)
     if [ -z "$upstream_url" ]; then
       echo "ERROR: ${repo} has no upstream remote. Run:"
-      echo "  git -C $path remote add upstream https://github.com/osac-project/${repo}.git"
+      echo "  git -C $path remote add upstream git@github.com:osac-project/${repo}.git"
       # Stop or prompt user
     elif echo "$upstream_url" | grep -qE "osac-project/${repo}(\.git)?$"; then
       # OK -- upstream points to the correct repo
@@ -149,12 +149,17 @@ for repo in <selected repos>; do
 done
 ```
 
-If a selected repo is not found, ask the user (AskUserQuestion):
-- A) Clone it now (`git clone git@github.com:osac-project/<repo>.git` into the
-  sibling directory, then `git remote rename origin upstream` to match OSAC
-  convention)
-- B) Provide an explicit path to an existing checkout
-- C) Skip this component (the umbrella chart will use the component's current
+If a selected repo is not found, clone it automatically via SSH without asking:
+
+```bash
+git clone git@github.com:osac-project/<repo>.git "${PARENT_DIR}/${repo}"
+git -C "${PARENT_DIR}/${repo}" remote rename origin upstream
+```
+
+**Always use SSH** (`git@github.com:`) for cloning -- HTTPS clones cannot push
+tags. If the SSH clone fails, then ask the user (AskUserQuestion):
+- A) Provide an explicit path to an existing checkout
+- B) Skip this component (the umbrella chart will use the component's current
   published version)
 
 **Pre-flight warnings (non-blocking):**

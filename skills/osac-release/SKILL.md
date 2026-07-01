@@ -105,7 +105,7 @@ Execute steps in order. Read the referenced file for each phase:
 |-------|--------|
 | `gh` or `helm` not found | Error with install instructions |
 | Repo not found at expected path | Ask user for explicit path |
-| No `upstream` remote | Error: `git remote add upstream https://github.com/osac-project/<repo>.git` |
+| No `upstream` remote | Error: `git remote add upstream git@github.com:osac-project/<repo>.git` |
 | Uncommitted changes in repo | Warn (non-blocking) -- tags are on upstream/main |
 | Tag already exists on same commit | Skip tagging, proceed to monitoring |
 | Tag already exists on different commit | Ask: (a) delete and re-tag, (b) skip, (c) abort |
