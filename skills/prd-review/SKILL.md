@@ -15,11 +15,9 @@ description: |
 
 ## Overview
 
-This skill reviews a Product Requirements Document against the PRD template,
-OSAC-specific feature dimensions, and quality standards derived from past
-review feedback. It scores the PRD across four dimensions and produces
-structured findings that help the author fix issues before human reviewers
-spend time on them.
+This skill reviews a Product Requirements Document against a calibrated rubric
+with concrete scoring examples. It uses calibrated 0-2 scoring per criterion with
+hard pass/fail thresholds — no weighted averages that mask problems.
 
 ## When to Use
 
@@ -57,98 +55,153 @@ Before reviewing, read these files if they exist:
 2. `.design/context/review-patterns.md` — reviewer feedback themes and anti-patterns
 3. `.planning/codebase/ARCHITECTURE.md` — system architecture for technical grounding
 
-## Review Dimensions
+## Scoring Rubric
 
-Evaluate the PRD across four dimensions. Each dimension is scored 1-5:
+### Context
 
-| Score | Meaning |
-|-------|---------|
-| 5 | Excellent — exceeds expectations, no issues |
-| 4 | Good — minor suggestions only |
-| 3 | Adequate — meets minimum bar, some gaps to address |
-| 2 | Needs work — significant gaps that will cause review friction |
-| 1 | Insufficient — fundamental problems, not ready for review |
+A PRD describes WHAT the product must do and WHY — from the user's perspective.
+A design document (enhancement proposal) describes HOW — architecture,
+controllers, API fields, playbooks. PRDs should be written from the perspective
+of a Product Manager, not an engineer.
 
-### Dimension 1: Clarity (weight: 30%)
+### Criteria (0-2 each, /10 total)
 
-Is the PRD clear, specific, and well-structured?
+Score each criterion independently. For each, first state your reasoning,
+then assign the score.
 
-Check:
-- [ ] Problem statement leads with user pain, not solution (3-5 sentences)
-- [ ] Problem statement quantifies impact if source material supports it
-- [ ] Goals are measurable outcomes, not activities ("Users can deploy X" not "Implement deployment")
-- [ ] Non-goals are specific, not vague ("Auto-scaling is out of scope" not "Advanced features")
-- [ ] No vague language ("appropriate", "efficient", "standard" without specifics)
-- [ ] No scope reduction language ("v2", "simplified", "placeholder", "future enhancement")
-- [ ] Terminology is consistent throughout — same concept never called by different names
-- [ ] Each section has substantive content or is explicitly omitted per template rules
+#### 1. WHAT — Clear user-facing need? (0-2)
 
-**Scoring guide:**
-- 5: Every goal is measurable, every requirement is specific, no vague language
-- 3: Goals are mostly outcomes, some requirements need tightening
-- 1: Goals describe activities, requirements are vague, scope is unclear
+Does the PRD clearly describe what users can do or observe?
 
-### Dimension 2: Scope (weight: 25%)
+Using `.design/context/osac-dimensions.md`, also check whether the PRD
+addresses the OSAC dimensions relevant to this feature:
+- **Services**: Which services (BMaaS, CaaS, VMaaS, MaaS, Enclave) are in scope?
+- **Personas**: Cloud Provider Admin, Cloud Infrastructure Admin, Tenant Admin, Tenant User — which are affected and how?
+- **Cross-cutting dimensions** (tenant onboarding, inventory, provisioning, networking, storage, installation): addressed or explicitly out of scope where relevant?
+- **Verification scope**: Milestone declares what must be demonstrably working for users (vs deferred); cross-cutting user journeys identified — detailed test plan belongs in the EP
+- **Documentation**: User-observable doc needs identified; milestone scope (in scope vs deferred); impact on existing documented workflows — detailed doc plan belongs in the EP
+- **UI**: User-observable console needs identified; persona workflows affected; milestone scope (in scope vs API/CLI-only vs deferred) — detailed UI design belongs in the EP
+- **API resources**: For each in-scope service, affected API resources listed
 
-Is the PRD right-sized with clear boundaries?
+Not every dimension applies to every feature. Don't penalize for dimensions
+that aren't relevant — but a PRD that names no personas or services has an
+unclear WHAT.
 
-Check:
-- [ ] Target milestone is declared (e.g., 0.1, 0.2)
-- [ ] What's NOT covered is explicit — deferred capabilities listed as non-goals
-- [ ] No scope creep signals ("and related functionality", "all necessary changes", "full support for")
-- [ ] Functional requirements are enumerable (each has a stable FR-N ID)
-- [ ] 3-5 goals (more suggests scope is too broad)
-- [ ] Non-goals prevent reasonable misinterpretations of scope
-- [ ] Dependencies are identified with ordering constraints
-- [ ] Risks have owners and mitigations (not generic statements)
+- 0 = Vague, unclear, or describes system internals rather than user outcomes. No personas or services identified.
+- 1 = Ambiguous — need is partially clear but mixed with implementation, missing specifics, or missing affected personas
+- 2 = Clear, specific, user-observable capabilities. Affected personas and services identified.
 
-**Scoring guide:**
-- 5: Crystal clear boundaries, explicit milestone scoping, no creep signals
-- 3: Boundaries mostly clear, some non-goals could be more specific
-- 1: Scope is unbounded, no milestone declaration, creep signals throughout
+**Calibration examples:**
 
-### Dimension 3: Coverage (weight: 30%)
+- W=0: "Implement CSI driver installation via AAP playbook on ClusterOrder Ready event" — describes a system action, not a user need. No persona mentioned.
+- W=1: "Storage should be available on CaaS clusters" — right direction but vague. Which clusters? What does "available" mean to the user? How would a tenant know? No personas identified.
+- W=2: "When a CaaS cluster is provisioned and ready, tenants can create persistent volumes using StorageClasses without manual configuration. Tenants can see whether storage is ready on their cluster. Cloud Provider Admins can see storage readiness across all tenant clusters." — clear, observable, specific, personas identified.
 
-Does the PRD address all relevant OSAC dimensions and personas?
+#### 2. WHY — Business justification? (0-2)
 
-Using `.design/context/osac-dimensions.md`, check:
+Is there a clear reason this work matters — user pain, business need, or strategic goal?
 
-- [ ] **Services declared**: Which services (BMaaS, CaaS, VMaaS, MaaS, Enclave) are in scope?
-- [ ] **All four personas considered**: Cloud Provider Admin, Cloud Infrastructure Admin, Tenant Admin, Tenant User — for each in-scope service, what does each persona do?
-- [ ] **Tenant onboarding**: RBAC, IDP, auto-provisioned resources addressed (or explicitly out of scope)
-- [ ] **Inventory**: Backend(s) identified, API integration vs. direct access clarified
-- [ ] **Provisioning**: Mechanism identified, lifecycle stages specified
-- [ ] **Networking**: Backend(s) identified, API-integrated vs. side-channel clarified
-- [ ] **Storage**: Prerequisites, automation, per-tenant provisioning addressed
-- [ ] **Installation**: Helm/kustomize changes, CI implications, osac-installer updates
-- [ ] **Verification scope**: Milestone declares what must be demonstrably working for users (vs deferred); cross-cutting user journeys identified — detailed test plan belongs in the EP
-- [ ] **Documentation**: User-observable doc needs identified; milestone scope (in scope vs deferred); impact on existing documented workflows — detailed doc plan belongs in the EP
-- [ ] **API resources**: For each in-scope service, affected API resources listed
+- 0 = No justification, or circular reasoning ("we need X because we don't have X")
+- 1 = Generic justification — plausible but no specific evidence (e.g., "users need this")
+- 2 = Concrete justification — names the pain, quantifies impact, or ties to a strategic goal with a clear causal chain
 
-Not every dimension applies to every feature. Score based on whether the PRD
-*addresses* each relevant dimension (even if just to say "not affected"), not
-whether every dimension is in scope.
+Take stated evidence at face value. Search the entire PRD for evidence, not
+just a dedicated section.
 
-**Scoring guide:**
-- 5: All relevant dimensions addressed, all personas covered for in-scope services
-- 3: Most dimensions covered, some personas missing, some dimensions not mentioned
-- 1: Only one persona considered, most dimensions ignored
+**Calibration examples:**
 
-### Dimension 4: Testability (weight: 15%)
+- Y=0: "Add storage support for CaaS clusters" with no explanation of why this matters or what happens without it.
+- Y=0: A feature listing 11 Definition of Done bullets and 10 user stories but zero explanation of why this capability matters, who is asking for it, or what happens without it.
+- Y=1: "Tenants cannot run stateful workloads on CaaS clusters without manual storage configuration." — describes the gap but no impact.
+- Y=2: "CaaS clusters are provisioned without persistent storage. Tenants cannot run stateful workloads until someone manually configures storage, and there is no visibility into whether storage is available. This blocks CaaS adoption for any tenant with stateful workloads." — names the pain, describes the consequence, ties to adoption.
+- Y=2: "Multi-tenant GPU clusters require InfiniBand tenant isolation to prevent cross-tenant traffic interference. Without isolation, tenants sharing a fabric can observe each other's RDMA traffic, which is a security and compliance blocker for sovereign AI deployments." — specific pain, concrete consequence, ties to strategic goal.
 
-Can the requirements be verified?
+#### 3. User-Facing Focus — Free from design leakage? (0-2)
 
-Check:
-- [ ] Each functional requirement (FR-N) is testable — you can describe how to verify it
-- [ ] Acceptance criteria are concrete, verifiable conditions (checkboxes)
-- [ ] Acceptance criteria cover the primary use cases (edge cases belong in test plan)
-- [ ] Non-functional requirements are measurable ("API response under 200ms at p95" not "fast")
-- [ ] Success metrics have targets and baselines (when included)
+Does the PRD describe user-observable outcomes without prescribing implementation?
+A PRD defines WHAT and WHY. The design document (enhancement proposal) defines HOW.
 
-**Scoring guide:**
-- 5: Every requirement is testable, acceptance criteria are concrete assertions
-- 3: Most requirements testable, some acceptance criteria are vague
-- 1: Requirements describe activities, acceptance criteria are untestable
+User-facing surfaces (CLI commands, UI pages, API resource names visible to
+users) are WHAT. Internal architecture (controllers, reconcilers, playbooks,
+env vars, finalizers, internal conditions) is HOW.
+
+**OSAC platform vocabulary** — referencing these by name is acceptable context,
+not design leakage:
+- Platform: OpenShift, Kubernetes, Hosted Control Planes
+- Services: BMaaS, CaaS, VMaaS, MaaS, Enclave
+- Resources (user-facing): ClusterOrder, ComputeInstance, Tenant, VirtualNetwork, Subnet, SecurityGroup, PublicIPPool, PublicIP, StorageClass
+- Networking: OVN, Multus, NetworkClass
+- Storage: VAST, CSI
+- Auth: Keycloak, OPA
+- Tools: kubectl, grpcurl, Helm
+
+Naming platform technologies is not automatically prescriptive. But mandating
+which internal component solves a problem, or describing controller logic,
+finalizer behavior, or playbook parameters IS design leakage.
+
+- 0 = PRD reads like a design document — names controllers, describes reconciliation logic, specifies internal API fields or conditions, references playbook parameters
+- 1 = Mostly user-focused but some design details leak through — names an internal component or describes a behavior only observable by reading code
+- 2 = Describes only user-observable outcomes; implementation details are absent or limited to platform vocabulary
+
+**Calibration examples:**
+
+- UF=0: "When a ClusterOrder reaches phase=Ready and the owning Tenant has StorageBackendReady=True, the storage controller invokes osac-create-tenant-cluster-storage with provisioning_target=hcp_data_plane." — names controllers, internal conditions, playbook parameters.
+- UF=0: "The storage controller places a finalizer on each ClusterOrder where storage was set up. On deletion, it triggers osac-delete-tenant-cluster-storage to remove StorageClasses, VolumeSnapshotClasses, and CSI Secret from the CaaS cluster." — describes finalizer behavior and cleanup implementation.
+- UF=1: "Storage is automatically provisioned on CaaS clusters when they become ready. The controller uses AAP to install the CSI driver." — good user outcome, but "the controller uses AAP" is an implementation detail.
+- UF=2: "When a CaaS cluster is provisioned and ready, persistent storage is automatically available on the cluster without manual configuration." — pure user outcome.
+- UF=2: "Tenants can see storage readiness on their ClusterOrder status." — ClusterOrder is user-facing platform vocabulary, readiness is observable.
+
+**Smell tests:**
+- "Could a PM verify this by using the product?" — if no, it's design leakage
+- "Would this statement change if we swapped the implementation?" — if no, it belongs in the PRD; if yes, it's design
+- "Does this name something only visible in code?" — if yes, it's design leakage
+
+#### 4. Right-Sized — Focused scope? (0-2)
+
+Is the PRD scoped to a coherent set of capabilities, or does it bundle
+unrelated work?
+
+When multiple capabilities are present, test independence: could each
+ship on its own and provide value? Capabilities that cannot function
+without each other are one feature regardless of how many user stories
+they span.
+
+- 0 = Bundles 3+ independent capabilities that serve different personas or purposes
+- 1 = Bundles 1-2 separable capabilities that could ship independently
+- 2 = Focused — capabilities require each other to function
+
+**Calibration examples:**
+
+- R=0: "Add storage support, networking policy enforcement, and cluster monitoring for CaaS." — three independent capabilities for different concerns.
+- R=0: "East-west connectivity: Ethernet fabric provisioning, InfiniBand tenant isolation, NVLink partition management, VPC peering, and cross-fabric validation." — five independent capabilities that each serve different fabric types and could ship independently. This should be split into individual features per fabric type.
+- R=1: "Add CaaS cluster storage and add tenant storage quota management." — storage provisioning and quota management serve different workflows (day-1 vs day-2) and could ship independently.
+- R=2: "CaaS cluster storage: automatic provisioning, readiness visibility, and cleanup on deletion." — provisioning without visibility is incomplete; cleanup without provisioning is meaningless. Tightly coupled.
+
+When a PRD scores 0, recommend restructuring as an epic with individual
+features that can be prioritized, estimated, and delivered independently.
+
+#### 5. Testability — Verifiable requirements? (0-2)
+
+Can the requirements be verified by a PM or QA engineer using the product?
+
+- 0 = Requirements describe activities or system internals that can't be tested from the outside
+- 1 = Some requirements are testable, others are vague or describe internal behavior
+- 2 = Every requirement and acceptance criterion can be verified by using the product
+
+**Calibration examples:**
+
+- T=0: "The controller reconciles within 30 seconds" and "The finalizer is removed after cleanup completes" — not observable by users.
+- T=1: "Tenants can create PVCs on CaaS clusters" (testable) mixed with "The AAP job succeeds and StorageClasses are confirmed" (internal).
+- T=2: "A tenant can create a PVC using a StorageClass on their CaaS cluster within 5 minutes of the cluster becoming ready." — observable, measurable, testable.
+
+### Pass/Fail
+
+- **PASS**: Total >= 7/10 AND no zeros on any criterion
+- **FAIL**: Total < 7 OR any zero (automatic fail regardless of total)
+
+A single zero is an automatic fail because it signals a fundamental problem
+(e.g., the PRD is a design doc, or requirements are untestable). The author
+must fix zero-scored criteria before resubmission.
 
 ## Output Format
 
@@ -159,22 +212,23 @@ Present findings as a structured review:
 
 ### Rubric Scores
 
-| Dimension | Score | Weight | Weighted |
-|-----------|-------|--------|----------|
-| Clarity | X/5 | 30% | X.X |
-| Scope | X/5 | 25% | X.X |
-| Coverage | X/5 | 30% | X.X |
-| Testability | X/5 | 15% | X.X |
-| **Overall** | | | **X.X/5** |
+| Criterion | Score | Notes |
+|-----------|-------|-------|
+| WHAT (clear need) | X/2 | {explain what need is described and how clearly; note persona/dimension coverage} |
+| WHY (justification) | X/2 | {cite the specific evidence found or note its absence} |
+| User-Facing Focus | X/2 | {note any design leakage or lack thereof} |
+| Right-Sized | X/2 | {assess scope — independent capabilities?} |
+| Testability | X/2 | {which requirements are verifiable by using the product?} |
+| **Total** | **X/10** | **PASS / FAIL** |
 
-### Verdict: {PASS / NEEDS WORK / SIGNIFICANT GAPS}
+### Verdict: {PASS / FAIL}
 
-{1-2 sentence assessment}
+{1-2 sentence assessment. If fail, name the zero-scored criteria first.}
 
 ### Findings
 
-#### Critical (must fix before publish)
-1. {finding with specific section reference and suggestion}
+#### Critical (must fix — zero-scored criteria)
+1. {finding with specific section reference, quote the problematic text, suggest a user-focused rewrite}
 
 #### Important (should fix)
 1. {finding with specific section reference and suggestion}
@@ -182,46 +236,25 @@ Present findings as a structured review:
 #### Suggestions (nice to have)
 1. {finding}
 
-### Dimension Details
+### Criterion Details
 
-#### Clarity
-{What's good, what needs improvement, specific examples}
-
-#### Scope
-{What's good, what needs improvement, specific examples}
-
-#### Coverage
-{Which dimensions are addressed, which are missing, persona gaps}
-
-#### Testability
-{Which requirements are testable, which need tightening}
-
-### Checklist Summary
-- [x] Problem statement present and compelling
-- [ ] All four personas considered
-- [x] Milestone boundaries declared
-...
+{For each criterion, explain the score with specific quotes from the PRD.
+Show what's good and what needs improvement. For design leakage, quote the
+offending text and show what a user-focused rewrite would look like.}
 ```
-
-## Verdict Thresholds
-
-| Overall Score | Verdict |
-|---------------|---------|
-| 4.0+ | **PASS** — Ready for `/prd:publish` |
-| 3.0-3.9 | **NEEDS WORK** — Address Important findings before publishing |
-| Below 3.0 | **SIGNIFICANT GAPS** — Address Critical findings, consider `/prd:clarify` |
 
 ## Severity Classification
 
-- **Critical**: Missing required sections, no personas identified, scope unbounded, requirements untestable, OSAC dimensions completely ignored
-- **Important**: Vague non-goals, missing personas, some dimensions not addressed, weak acceptance criteria, scope creep signals
-- **Suggestion**: Style improvements, additional non-goals, deeper risk analysis, more specific metrics
+- **Critical**: Any zero-scored criterion. Also: missing required sections, no personas identified, PRD reads like a design document.
+- **Important**: Score of 1 on any criterion. Also: vague non-goals, weak acceptance criteria, scope creep signals.
+- **Suggestion**: Style improvements, additional non-goals, deeper risk analysis, more specific metrics.
 
 ## Notes
 
 - Score based on what's in the PRD, not what you think should be there — if information is genuinely unavailable, "TBD" markers are acceptable
-- The coverage dimension uses `osac-dimensions.md` as a checklist, not a requirement — features that don't touch networking shouldn't be penalized for not addressing networking
-- Compare against the PRD template at `.ai-workflows/prd/templates/prd.md` for structural compliance (this path is available after `bootstrap.sh` installs [ai-workflows](https://github.com/flightctl/ai-workflows))
+- The WHAT criterion uses `osac-dimensions.md` to check persona and dimension coverage — but features that don't touch networking shouldn't be penalized for not addressing networking
+- Compare against the PRD template at `.prd/templates/prd.md` (project override) for structural compliance. If no project override exists, fall back to `.ai-workflows/prd/templates/prd.md`
+- A PRD that names specific controllers, playbooks, env vars, or internal conditions has design leakage. This is the most common failure mode — score it under User-Facing Focus
 - If the PRD was produced by `/prd:draft`, check that clarification locked decisions are reflected
 
 $ARGUMENTS
