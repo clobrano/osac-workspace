@@ -28,20 +28,10 @@ Collect from conversation context. Ask only if truly ambiguous:
 
 ## Create the Feature
 
-The User Stories section must include a subsection for each OSAC persona.
-For each subsection, either add an outcome-focused story or explicitly mark the
-persona as not affected by this feature. Use these exact persona names:
-
-| Persona | Role |
-|---------|------|
-| **Cloud Provider Admin** | Super-user: tenant onboarding, quotas, global catalogs |
-| **Cloud Infrastructure Admin** | Core infra: network, firewall, compute, storage, control plane integration |
-| **Tenant Admin** | Org config: IDP, users, quotas, org-specific catalogs |
-| **Tenant User** | Self-service: provisions and manages cloud resources |
-
-For each persona, write outcome-focused stories ("As a X, I want Y so that Z").
-If a persona is not affected by the feature, include a line stating it is not
-affected (e.g., "Cloud Infrastructure Admin — not affected by this feature").
+The User Stories section must include a subsection for each OSAC persona
+defined in [`docs/personas.md`](https://github.com/osac-project/docs/blob/main/personas.md).
+For each persona, either write an outcome-focused story ("As a X, I want Y
+so that Z") or explicitly mark the persona as not affected by this feature.
 
 ```bash
 KEY=$(jira issue create -t Feature --project OSAC \
