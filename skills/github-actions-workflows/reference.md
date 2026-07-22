@@ -16,8 +16,10 @@ semver_re='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*)
 If the tag is later used verbatim as a **container image tag**, drop the
 trailing `(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?` group entirely - Docker/OCI
 tags cannot contain `+`, so a tag like `v1.2.3+build.1` would pass this regex
-but produce an unusable image reference downstream. Use the same grammar
-without the `v` prefix when validating an already-stripped version string.
+but produce an unusable image reference downstream. The
+[#workflow_run-gate-pattern](#workflow_run-gate-pattern) template uses that
+image-tag-safe form on purpose. Use the same grammar without the `v` prefix
+when validating an already-stripped version string.
 
 ## Stale reusable-workflow pins
 
@@ -74,6 +76,29 @@ return identical data for `GET` - but verify against the actual docs
 (`https://docs.github.com/en/rest/git/refs`) before relying on undocumented
 behavior, empirical testing alone isn't enough.
 
+## Incomplete must not look clean
+
+A failed fetch / partial listing / timed-out search must not report the same
+as "scanned, nothing found." Keep separate flags (e.g. `SCAN_OK` vs
+`LEAKS_FOUND`). Before trusting emptiness:
+
+```bash
+# Require a real array, not null / missing
+jq -e '.items | type == "array"' "$RESP" >/dev/null
+
+# Require numeric counts before comparing
+jq -e '(.total_count | type) == "number"' "$RESP" >/dev/null
+
+# Some search endpoints set incomplete_results on timeout
+jq -e '.incomplete_results != true' "$RESP" >/dev/null
+```
+
+Treat `incomplete_results: true`, truncated pagination, or a malformed item
+(when you lack a per-item skip counter) as incomplete — bump a skipped /
+failed counter and surface it in summaries — never as a clean pass. Related:
+[fail loud on per-item batch failures](#fail-loud-on-per-item-batch-failures)
+and [detection vs remediation](#detection-vs-remediation-status).
+
 ## Dereferencing annotated tags
 
 `GET git/ref/tags/<tag>` returns the tag *object's* SHA for annotated tags,
@@ -93,27 +118,31 @@ Note `ref_json` is captured *before* `read` - see the checklist item on
 
 ## Tag immutability
 
-Re-checking a tag's SHA right before publishing (see the `workflow_run` gate
-template in [SKILL.md](SKILL.md)) is defense in depth, not a guarantee -
-there's still a window between the last check and the actual publish/release
-call where a tag could be force-moved. `gh release create --verify-tag` does
-not close that window either: it only confirms the tag *exists* at
-release-creation time, it does not re-check *which commit* it points at.
+Re-checking a tag's SHA right before publishing (see
+[#workflow_run-gate-pattern](#workflow_run-gate-pattern)) is defense in
+depth, not a guarantee - there's still a window between the last check and
+the actual publish/release call where a tag could be force-moved.
+`gh release create --verify-tag` does not close that window either: it only
+confirms the tag *exists* at release-creation time, it does not re-check
+*which commit* it points at.
 
-The structural fix is to make the tag unable to move in the first place:
+The structural fix is twofold — immutability *and* who may create the tag:
 
-- **Tag-protection ruleset**: a repository ruleset targeting tags (e.g.
-  `v*`) that blocks force-pushes/deletions on matching refs. Configured via
-  repo Settings -> Rules -> Rulesets, no workflow-side change needed.
-- **Immutable releases** (GitHub feature, currently rolling out): once a
-  release is marked immutable, its underlying tag is locked to that commit
-  for the release's lifetime - it can't be force-moved even by someone with
-  push access, unlike a ruleset which is more broadly bypassable by anyone
-  with ruleset-bypass permissions.
+- **Restrict `v*` tag creation** to authorized release actors (ruleset
+  targeting tags, or equivalent branch/tag protection). Immutability alone
+  stops later moves; it does **not** stop an unauthorized first push of a
+  release tag.
+- **Tag-protection ruleset**: block force-pushes/deletions on matching refs
+  (Settings -> Rules -> Rulesets). Pair with create-restrictions above.
+- **Immutable releases** (GitHub feature, rolling out): once a release is
+  marked immutable, its underlying tag is locked for the release's lifetime
+  — it can't be force-moved even by someone with push access, unlike a
+  ruleset which is more broadly bypassable by anyone with ruleset-bypass
+  permissions.
 
-If neither is enabled on a repo, say so explicitly when proposing this gate
-pattern - don't let the SHA re-checks imply a stronger guarantee than they
-actually provide.
+If create-restriction / immutability is not enabled, say so explicitly when
+proposing this gate pattern - don't let the SHA re-checks imply a stronger
+guarantee than they actually provide.
 
 ## workflow_run privilege escalation
 
@@ -221,7 +250,8 @@ if ! HTTP_CODE=$(curl -sL -o /dev/null -w '%{http_code}' -X DELETE \
   --connect-timeout 10 --max-time 30 "$URL"); then
   HTTP_CODE="curl-transport-error"
 fi
-if [[ "${HTTP_CODE}" != "204" ]]; then ...
+# Idempotent DELETE: 404 = already gone (e.g. retry after a blip) — still OK.
+if [[ "${HTTP_CODE}" != "204" && "${HTTP_CODE}" != "404" ]]; then ...
 ```
 
 Apply this to *every* curl call in a script that manually checks status,
@@ -234,6 +264,16 @@ three more curl calls in `audit-workflow-logs.yml`. Three separate files,
 three separate review rounds, same exact gap each time. Fix the pattern
 everywhere it appears across a PR's changed files in one pass, rather than
 waiting for each file to individually surface in its own review round.
+
+**Gap 3: retries and idempotent DELETE.** Share one `fetch_with_retry`
+helper (e.g. `.github/scripts/lib-github.sh`) for 429/5xx/transport blips
+on **idempotent** calls (GET, DELETE, PUT with known body). Do **not**
+blindly retry non-idempotent POST/PATCH unless the API accepts an
+idempotency key or the caller documents a request-specific retry policy
+(duplicate creates are worse than a failed notify). For DELETE, treat
+**404 as success** as well as 204: a first attempt can succeed while a
+retry after a transport blip sees "already gone"; counting that as purge
+failure trains people to ignore real open windows.
 
 ## Fail loud on per-item batch failures
 
@@ -271,6 +311,36 @@ means less coverage this run (and is tracked as such, per the fail-closed
 status pattern below); skipping an unredactable *file* inside a batch
 that's about to be uploaded as "the redacted copy" means shipping exactly
 the thing the step exists to prevent.
+
+The same fail-closed contract shows up in bash redaction pipelines that
+feed a composite-action marker (e.g. `.redaction-complete` only written
+when the gather script exits 0). A common false friend:
+
+```bash
+# BAD - || true is often added so an empty ARTIFACT_DIR doesn't abort,
+# but it also hides a real sed failure — the script still exits 0, the
+# marker gets written, and un-redacted files upload
+find "${ARTIFACT_DIR}" -type f \( -name "*.log" -o -name "*.txt" \) -print0 \
+  | xargs -0 sed -i -E -e 's/"password":[[:space:]]*"[^"]+"/"password": "REDACTED"/g' \
+  || true
+
+# GOOD - xargs -r (GNU) skips the command on empty input; omit || true so
+# genuine sed failures still propagate. pipefail ensures a failed find is
+# not masked by a successful xargs.
+set -o pipefail
+find "${ARTIFACT_DIR}" -type f \( -name "*.log" -o -name "*.txt" \) -print0 \
+  | xargs -r -0 sed -i -E -e 's/"password":[[:space:]]*"[^"]+"/"password": "REDACTED"/g'
+
+# GOOD - find -exec also succeeds on zero matches, fails if sed fails
+# (no pipe, so no pipefail requirement)
+find "${ARTIFACT_DIR}" -type f \( -name "*.log" -o -name "*.txt" \) \
+  -exec sed -i -E -e 's/"password":[[:space:]]*"[^"]+"/"password": "REDACTED"/g' {} + \
+  || { echo "ERROR: password redaction failed" >&2; exit 1; }
+```
+
+Pair that with nonzero exits on Python I/O errors inside the redactor
+itself — a silent `except OSError: continue` has the same shape as the
+`redact.py` example above.
 
 The same distinction applies one level down, inside a single API response,
 not just across targets. `discover-e2e-runs.sh` used `jq`'s `select(...)`
@@ -344,13 +414,18 @@ Two independent mistakes, both required:
 1. **Encoding gap.** Plaintext JSON redaction never sees a base64 payload.
    JWT-shaped redaction (`eyJ.a.b`) misses single-segment base64 JSON.
    Substring-matching the base64 of the key name
-   (`YnJlYWtfZ2xhc3NfY3JlZGVudGlhbHM` for `break_glass_credentials`) is
+   (`ZXhhbXBsZV9zZWNyZXRfa2V5` for `example_secret_key`) is
    alignment-fragile - embedding the key at an arbitrary byte offset does
    not preserve a stable base64 substring. Decode each quoted candidate
    (standard and URL-safe) and look for the key in the plaintext; when
    found, replace the original encoded candidate in the output with a
    redaction marker (the encoded form is just as sensitive as the
-   plaintext).
+   plaintext). Use strict decode (`validate=True`, and `altchars=b"-_"`
+   / equivalent for URL-safe). Normalize `=` padding before decode —
+   unpadded URL-safe tokens otherwise fail under `validate=True` and
+   redaction can miss them. Cover both padded and unpadded encoded-secret
+   fixtures in tests. Permissive `validate=False` can silently strip
+   `-`/`_` from URL-safe input and miss the needle entirely.
 2. **Re-echo gap.** Even a perfect artifact redaction is undone if the
    job log reprints the pre-fix content (or a redaction miss) via
    `grep -C` / `cat` / `$GITHUB_STEP_SUMMARY`. Keep the full
@@ -606,3 +681,331 @@ to any test/verification script, not just the workflows it exercises:
   fixture with a known expected result before trusting it, and prefer an
   explicit set-difference instead of relying on the combination working:
   `comm -23 <(all_values | sort -u) <(printf '%s\n' "$target" | sort -u)`.
+
+## Sparse-checkout cone mode blocks single-file checkouts
+
+`actions/checkout`'s `sparse-checkout` input defaults to cone mode, which
+only accepts directory-level patterns. A single-file path like
+`.github/scripts/check-floating-tags.sh` silently checks out nothing
+useful in cone mode — you get the directory structure but not the file.
+Disable cone mode explicitly:
+
+```yaml
+- uses: actions/checkout@<sha>  # v7
+  with:
+    sparse-checkout: .github/scripts/check-floating-tags.sh
+    sparse-checkout-cone-mode: false   # required for file-level patterns
+    path: trusted
+```
+
+This showed up when checking out a trusted base-branch script alongside
+the full PR checkout — the script simply didn't appear in the `trusted/`
+directory until cone mode was disabled.
+
+## PR-controlled enforcement scripts
+
+A `pull_request`-triggered workflow that checks out the PR's code and runs a
+script from that checkout is **self-enforcing, not tamper-proof**: a
+contributor can modify the script in the same PR to always return success.
+Example: an enforcement script such as `check-floating-tags.sh` that runs
+from the PR checkout can be neutered in that same PR.
+
+These levels are for **workflow authors / maintainers** choosing how to
+protect an enforcement check — not something a PR creator picks at submit
+time. Choose by whether the repo trusts all contributors, or must resist
+adversarial PRs:
+
+1. **Trusted contributors (internal repos):** Accept the risk. The script
+   and workflow paths should be covered by CODEOWNERS so changes require
+   maintainer approval. Note: CODEOWNERS alone only *requests* review —
+   you must also enable branch protection with "Require review from Code
+   Owners" to make approval mandatory. This protects the enforcement
+   script/workflow paths; it does not mean ordinary CI/E2E waits for
+   CODEOWNERS approval on human-authored PRs (gating bot-authored PRs
+   such as `osac-dev-bot` is a separate policy choice). Document accepted
+   risk in the PR description when you rely on this level.
+
+2. **Base-branch checkout (script integrity only):** Check out the script
+   from the base branch instead of the PR head so the PR can't modify the
+   *script body*. This is not sufficient alone: on a same-repo
+   `pull_request`, the workflow file can still come from the PR head, so a
+   contributor can remove the step, change its args, or skip the call.
+   When the base branch lacks the trusted script, fail closed — do not
+   fall back to the PR copy.
+
+   ```yaml
+   - uses: actions/checkout@<sha>  # v7
+     with:
+       ref: ${{ github.event.pull_request.base.sha }}
+       persist-credentials: false
+       path: trusted
+   - uses: actions/checkout@<sha>  # v7
+     with:
+       persist-credentials: false
+       path: pr
+   - run: bash "$GITHUB_WORKSPACE/trusted/.github/scripts/check-floating-tags.sh"
+     working-directory: pr
+   ```
+
+   Trade-off: more complex checkout, and the script version can trail the
+   PR if the PR legitimately updates both the script and the values. Pair
+   with level 3 when the repo must resist adversarial PRs.
+
+3. **Protected reusable workflow + required check:** Move the enforcement
+   into a reusable workflow in a protected repo (e.g. `osac-test-infra`)
+   and make that check a required status check on the target branch. A bare
+   required check is not enough if a PR-controlled workflow can keep the
+   same check name and always succeed — the workflow that produces the
+   check must itself be trusted (reusable from a protected repo, or
+   otherwise outside PR control). The calling repo cannot alter the
+   reusable workflow's code, and omitting the call fails the merge gate.
+   Trade-off: cross-repo dependency and pin maintenance.
+
+## workflow_run gate pattern
+
+The single highest-value pattern from the OSAC-2185 cycle: gating a
+chart/release publish on a sibling image-build workflow's success, instead
+of both triggering independently off the same tag push (which lets a chart
+"publish" even when the matching image never got built).
+
+**Upstream contract:** the image-build workflow must trigger only on tag
+pushes (`on: push: tags: ['v*']`), not on branches. The guard below treats
+`workflow_run.head_branch` as a tag name; a *branch* literally named
+`v1.2.3` would also match the semver regex — don't rely on the regex alone
+if the upstream workflow can run on branch pushes. After checkout, prefer
+confirming `refs/tags/${TAG}` exists (the shared
+`verify-tag-matches-sha.sh` path) before publishing.
+
+```yaml
+name: Publish something
+
+on:
+  workflow_run:
+    workflows: ["Build container image"]  # must match the *name:* field, not the filename
+    # Assumes that workflow is tag-push-only (see Upstream contract above).
+    types: [completed]
+
+jobs:
+  guard:
+    name: Verify image build succeeded
+    runs-on: ubuntu-latest
+    permissions: {}
+    if: >
+      github.event.workflow_run.event == 'push' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
+    outputs:
+      tag: ${{ github.event.workflow_run.head_branch }}
+      sha: ${{ github.event.workflow_run.head_sha }}
+    steps:
+    - name: Check image build result
+      env:
+        CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+      run: |
+        # Image-tag-safe semver: intentionally rejects +build metadata
+        # (Docker/OCI tags cannot contain '+'). For the full grammar that
+        # allows +build when the tag is *not* used as an image tag, see
+        # #semver-regex.
+        semver_re='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?$'
+        if ! [[ "$HEAD_BRANCH" =~ $semver_re ]]; then
+          echo "::error::Tag '$HEAD_BRANCH' is not a valid semver release tag (image-tag-safe; +build rejected)"
+          exit 1
+        fi
+        if [[ "$CONCLUSION" != "success" ]]; then
+          echo "::error::Image build for tag $HEAD_BRANCH did not succeed (conclusion: $CONCLUSION). Refusing to publish."
+          exit 1
+        fi
+        echo "Image build succeeded for tag $HEAD_BRANCH"
+
+  publish:
+    needs: guard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # create GitHub Release + attach assets
+      # packages: write  # only if this job pushes to GHCR/npm/etc.
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      with:
+        ref: ${{ needs.guard.outputs.sha }}
+        persist-credentials: false
+
+    # Re-verify right after checkout (before packaging/pushing anything) so a
+    # force-push/retag race is caught before an artifact is uploaded - not
+    # just once, right before the release. See scripts/verify-tag-matches-sha.sh.
+    - name: Verify tag still points at the guarded commit
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ needs.guard.outputs.tag }}
+        GUARDED_SHA: ${{ needs.guard.outputs.sha }}
+        REPO: ${{ github.repository }}
+      run: .github/scripts/verify-tag-matches-sha.sh
+
+    # ... package/publish steps here, using needs.guard.outputs.tag ...
+
+    # Re-verify again immediately before the release call. This - and
+    # --verify-tag below - are defense in depth, not a guarantee: a tag
+    # can still be moved in the instant between this check and the API
+    # call. The structural fix is a tag-protection ruleset or immutable
+    # releases on the repo (see [tag-immutability](#tag-immutability)) so tags
+    # can't be moved
+    # after creation in the first place.
+    - name: Verify tag still points at the guarded commit
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ needs.guard.outputs.tag }}
+        GUARDED_SHA: ${{ needs.guard.outputs.sha }}
+        REPO: ${{ github.repository }}
+      run: .github/scripts/verify-tag-matches-sha.sh
+
+    # --verify-tag only confirms the tag still exists at release-creation
+    # time - it does NOT re-check which commit it points at, so it can't
+    # by itself catch a retag that happened after the check above.
+    - name: Create GitHub Release
+      run: |
+        gh release create "${TAG}" --repo "${REPO}" --generate-notes --verify-tag
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ needs.guard.outputs.tag }}
+        REPO: ${{ github.repository }}
+```
+
+Copy `scripts/verify-tag-matches-sha.sh` from this skill into the target
+repo's `.github/scripts/` and `chmod +x` it - don't reimplement the
+dereferencing/failure-masking logic inline.
+
+**This checkout is the repo's own tagged source**, not untrusted PR code, so
+the classic `workflow_run` privilege-escalation risk doesn't directly apply.
+That still assumes only authorized release actors can create `v*` tags —
+restrict tag creation (and block force-moves) per
+[tag-immutability](#tag-immutability); do not treat "tagged on the default
+remote" as proof of a trusted releaser.
+If you adapt this pattern for a workflow triggered by untrusted contributions
+(e.g. `pull_request` from forks), never check out or execute contributor code
+in the privileged `publish` job. See
+[workflow_run privilege escalation](#workflow_run-privilege-escalation).
+
+Tag create-restriction + immutability aren't optional here — without them
+the SHA re-checks above imply a stronger guarantee than they provide. See
+[tag-immutability](#tag-immutability).
+
+## always() for notify and evidence
+
+A bare `if: <condition>` (no `success()` / `failure()` / `always()`)
+implicitly ANDs with `success()`, so a hard failure in an *earlier* step -
+exactly the case most worth alerting on - silently skips the notification
+or evidence upload meant to catch it. Found repeatedly on OSAC-1684 scan /
+audit workflows.
+
+```yaml
+# BAD - skipped if the "scan" step hard-fails (not just sets leaks-found)
+- if: steps.scan.outputs.leaks-found == 'true'
+  run: notify-slack ...
+
+# GOOD - notify
+- if: >
+    always() &&
+    (steps.scan.outcome == 'failure' || steps.scan.outputs.leaks-found == 'true')
+  run: notify-slack ...
+
+# GOOD - redacted evidence upload: confirmed leak *or* hard scan fail
+# (leaks-found may be unset if the composite died before publishing outputs)
+- if: >
+    always() &&
+    (steps.scan.outcome == 'failure' || steps.scan.outputs.leaks-found == 'true')
+  uses: actions/upload-artifact@<sha>
+```
+
+Only promise the artifact link in summaries when
+`steps.upload.outcome == 'success'` (see
+[detection vs remediation](#detection-vs-remediation-status)).
+
+Upload may still no-op / error when `redacted/` is empty after a hard fail
+before any redact completed — that is fine; the point is not to skip the
+step entirely via the implicit `success()` AND.
+
+## zizmor permission comments
+
+`zizmor`'s `undocumented-permissions` rule wants the rationale on the
+**permission line itself**, matching sibling scopes. A comment *above* the
+line does not count:
+
+```yaml
+# BAD - zizmor still warns on pull-requests
+# Comment on the PR when leaks are found.
+pull-requests: write
+
+# GOOD
+contents: read  # checkout only, no push
+actions: write  # fetch/delete completed run's logs
+pull-requests: write  # comment leak findings on the triggering PR
+```
+
+## composite action path resolution
+
+A composite action invoked cross-repo via
+`uses: org/repo/.github/actions/foo@<sha>` unpacks under `GITHUB_ACTION_PATH`.
+The *caller's* `$GITHUB_WORKSPACE` is a different checkout and often does
+**not** contain the action's sibling scripts or jq modules.
+
+```bash
+# BAD - breaks mirrors / cross-repo uses:
+jq -L "${GITHUB_WORKSPACE}/.github/scripts" 'include "md-cell"; ...'
+
+# GOOD - same pattern as invoking the scanner script:
+SCRIPTS_DIR="${GITHUB_ACTION_PATH}/../../scripts"
+"${GITHUB_ACTION_PATH}/../../scripts/scan-run-logs.sh" ...
+jq -L "${SCRIPTS_DIR}" 'include "md-cell"; ...'
+```
+
+Same-repo workflows that already checked out the defining repo may use
+`$GITHUB_WORKSPACE/.github/scripts`; composites that can be reused
+cross-repo must not.
+
+## markdown cell sanitization
+
+Escaping only `|` is not enough for Markdown tables or PR comments built
+from gitleaks / artifact-controlled `RuleID` / `File` values. Also:
+
+1. Strip `\r` / `\n` (row-break / inject).
+2. HTML-escape `&`, `<`, `>`.
+3. Escape `|` for table cells.
+4. Neutralize Markdown link/image syntax in attacker-controlled fields
+   (e.g. strip or escape `[`, `]`, `(`, `)`, `!`) so a crafted `File` path
+   cannot render as a clickable link or image in the comment/summary.
+   Prefer rendering the cell as a safely escaped code span when the
+   surrounding Markdown allows it.
+
+Prefer **one** shared jq module (e.g. `.github/scripts/md-cell.jq` with
+`def cell: ...`) loaded via `jq -L <dir> 'include "md-cell"; ...'`, and a
+separate producer sanitizer for `findings.json` (CR/LF only, drop secrets).
+Don't re-implement the filter in the job summary, PR comment, and trap.
+
+## best-effort side effects
+
+After scan/purge has already succeeded, side effects like `gh pr comment`
+must not fail the job under `set -e`. Treat API / closed-PR races as
+warnings; keep Slack/summary as the durable signal. Don't claim "purged" in
+the failure warning when `PURGE_OK` may be false.
+
+`workflow_run.pull_requests` is often empty (especially fork PRs). Resolve
+open PRs for `head_sha` carefully — require exactly one open match (paginate
+`commits/.../pulls`); skip when zero or ambiguous.
+
+## atomic status writes
+
+Write `status.env` / `findings.json` via `mktemp` in the same directory,
+then `mv` only after success. A failed `jq` (or EXIT-trap sanitizer) must
+not truncate/replace a previously valid file the trap or caller still needs.
+
+## scan logs and artifacts
+
+Credential scanners that only fetch `actions/runs/<id>/logs` miss secrets
+dumped into uploaded artifacts (e.g. AAP job stdout). List/download/scan
+artifacts too; on hit, DELETE the tainted artifact as well as logs.
+
+Never copy raw trees straight into the evidence upload directory. **Stage
+outside the upload root** (e.g. `${OUTPUT_DIR}/.redact-staging-*`), run
+redaction there, and only `mv` successfully redacted trees into
+`redacted/` (the path `actions/upload-artifact` publishes). A failed or
+aborted redact must leave nothing secret-bearing under the upload root.
