@@ -127,13 +127,12 @@ Failing to update `osac-installer` after cross-component changes causes CI failu
 
 ## Enhancement Proposals
 
-OSAC uses the flightctl ai-workflows PRD and design skills with project-level template overrides in `.design/templates/`. The two-stage flow produces a PRD followed by a design document.
+OSAC uses the flightctl ai-workflows PRD and design skills with project-level template overrides. The two-stage flow produces a PRD followed by a design document.
 
 ### Docs Repo
 
 - Both PRD and design workflows publish to the `enhancement-proposals` repo
-- Local path: `./enhancement-proposals/`
-- When the publish phase asks for the docs repo, provide this path
+- Local path: `./enhancement-proposals/` — give this path when `/publish` asks for the docs repo
 
 ### File Path Conventions
 
@@ -158,15 +157,15 @@ Both PRD and design ingest phases must read all files in `.design/context/`:
 
 ### Component Conventions
 
-Design and implement ingest phases must read the `AGENTS.md` of each component repo affected by the feature. These contain authoritative conventions for API design, database patterns, testing, and build tooling that the generic workspace rules summarize but do not replace.
+Design and implement ingest phases must read the `AGENTS.md` of each component repo affected by the feature — authoritative on API design, database patterns, testing, and build tooling; the generic workspace rules summarize but don't replace them.
 
 For features involving the fulfillment-service API (proto definitions, services, request/response patterns), `fulfillment-service/AGENTS.md` points to [`fulfillment-service/docs/API.md`](fulfillment-service/docs/API.md) — the canonical API design guidelines. Read it before drafting or reviewing proto schemas.
 
 ### Template Overrides
 
-- Design template: `.design/templates/design.md` (EP format with PRD-aware modifications)
-- Design section guidance: `.design/templates/section-guidance.md`
-- PRD template: `.prd/templates/prd.md` (user stories by persona, In Scope/Out of Scope instead of FR-N/NFR-N)
+- Design template: `enhancement-proposals/guidelines/design_template.md` (EP format with PRD-aware modifications)
+- Design section guidance: `.design/templates/section-guidance.md` — stays local; hand-synced with `design_template.md`
+- PRD template: `enhancement-proposals/guidelines/prd_template.md` (user stories by persona, In Scope/Out of Scope instead of FR-N/NFR-N)
 
 ## Jira Conventions
 
@@ -306,8 +305,7 @@ When fixing bugs or adding features, **check all controllers** that follow the s
 
 ## UI Reference (osac-ux)
 
-`osac-ux/` is cloned read-only from [osac-project/osac-ux](https://github.com/osac-project/osac-ux).
-No PRs are created against it from backend workflow sessions (no `fork` remote).
+`osac-ux/` is cloned read-only from [osac-project/osac-ux](https://github.com/osac-project/osac-ux) — no `fork` remote, no PRs from backend workflow sessions.
 
 ### What to read during /design:research and /implement:ingest
 
@@ -395,7 +393,7 @@ CLAUDE.md                  # Claude Code project instructions
 .claude/settings.json      # Pre-approved shell commands
 .claude/rules/             # Architecture, protobuf, cross-repo conventions
 .claude/hooks/             # Workflow hooks
-.design/templates/         # PRD and design template overrides
+.design/templates/         # Section guidance override
 .design/context/           # Feature dimensions and review patterns
 skills/                    # AI skills (PRD/design workflows, Jira, bug fix, demo recording)
 tools/pr-notify/           # PR dashboard generator

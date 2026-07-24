@@ -15,8 +15,8 @@ description: |
 
 ## Overview
 
-This skill reviews a design document against the [OSAC design template](../../.design/templates/design.md),
-architectural conventions, and patterns learned from past reviewer feedback.
+This skill reviews a design document against the [OSAC design template](../../enhancement-proposals/guidelines/design_template.md)
+and [author guide](../../enhancement-proposals/guidelines/design_guide.md), architectural conventions, and patterns learned from past reviewer feedback.
 Design documents describe HOW — architecture, APIs, implementation. User stories
 and persona coverage belong in the PRD (`prd.md`), not the design.
 It uses calibrated 0-2 scoring across 4 dimensions with hard pass/fail
