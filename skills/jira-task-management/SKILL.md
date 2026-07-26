@@ -240,6 +240,7 @@ jira open           # Open project page
 
 - **"No result found for given query in project OSAC":** The query is scoped to the default OSAC project. To search across projects, start `-q` with `project IS NOT EMPTY AND ...`. See the Search section above.
 - **"Expecting ',' but got 'ORDER'" JQL error:** You included `ORDER BY` in a `-q` query. Remove it — jira-cli appends its own `ORDER BY created DESC` automatically.
+- **"unknown flag: --description":** `jira-cli` has no `--description` flag. Use `-b` / `--body` for issue description, or `--template` to load from a file. See Create section above.
 - **"unknown flag: --json":** `jira-cli` has no `--json` flag. Use `--plain` for clean output or `--raw` (create only) for JSON.
 - **"flag needs an argument: --comments":** `--comments` requires a numeric count (e.g., `--comments 10`). Never use `--comments` without a number.
 - **"unknown flag: --no-input" on move/assign/comment:** `--no-input` is only valid for `create` and `edit`. Remove it — move, assign, comment, and link don't need it.
