@@ -1,12 +1,14 @@
 # Technology Stack
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-07-27
 
 ## Languages
 
 **Primary:**
-- Go 1.25.0 - Used in `fulfillment-service` (`fulfillment-service/go.mod`) and `osac-operator` (`osac-operator/go.mod`)
+- Go 1.26.3 - Used in `fulfillment-service`, `osac-operator`, and `bare-metal-fulfillment-operator`
 - Python 3.13+ - Used in `osac-aap` for Ansible Automation Platform roles and playbooks (`osac-aap/pyproject.toml`)
+- Python 3.14+ - Used in `fulfillment-service` for dev tooling (`fulfillment-service/pyproject.toml`)
+- Python 3.11+ - Used in `osac-test-infra` for E2E tests (`osac-test-infra/pyproject.toml`)
 
 **Secondary:**
 - YAML - Kubernetes manifests, Helm charts, Ansible playbooks
@@ -15,8 +17,10 @@
 ## Runtime
 
 **Environment:**
-- Go 1.25.0 runtime for compiled services
+- Go 1.26.3 runtime for compiled services
+- Python 3.14+ runtime for fulfillment-service dev tooling
 - Python 3.13+ runtime for Ansible automation
+- Python 3.11+ runtime for E2E tests (osac-test-infra)
 - Kubernetes 1.31+ as deployment target (via Kind for testing, OpenShift for production)
 
 **Package Manager:**
@@ -26,8 +30,8 @@
 ## Frameworks
 
 **Core Services:**
-- gRPC v1.79.3 - RPC framework for inter-service communication (`fulfillment-service/go.mod`)
-- grpc-gateway v2.28.0 - HTTP/JSON to gRPC transcoding (`fulfillment-service/go.mod`)
+- gRPC v1.82.1 - RPC framework for inter-service communication (`fulfillment-service/go.mod`)
+- grpc-gateway v2.29.0 - HTTP/JSON to gRPC transcoding (`fulfillment-service/go.mod`)
 - Buf v2 - Protocol Buffer management and code generation (`fulfillment-service/buf.yaml`)
 
 **Web/API:**
@@ -35,14 +39,16 @@
 - Prometheus HTTP handlers for metrics exposure
 
 **Kubernetes:**
-- controller-runtime v0.23.3 - Kubernetes operator development framework (`fulfillment-service/go.mod`, `osac-operator/go.mod`)
-- Kubernetes client-go v0.35.3 - Official Kubernetes Go client (`fulfillment-service/go.mod`)
+- controller-runtime v0.24.1 - Kubernetes operator development framework (`fulfillment-service/go.mod`, `osac-operator/go.mod`, `bare-metal-fulfillment-operator/go.mod`)
+- Kubernetes client-go v0.36.2 - Official Kubernetes Go client (`fulfillment-service/go.mod`)
+- kubevirt.io/api v1.8.4 - KubeVirt VM management (`osac-operator/go.mod`)
+- multicluster-runtime v0.24.1 - Multi-cluster hub/remote operation (`osac-operator/go.mod`)
 - OpenShift HyperShift API v0.0.0-20250331235933 - For cluster provisioning (`osac-operator/go.mod`)
 - OVN-Kubernetes v0.0.0-20251211123925 - Advanced networking (`osac-operator/go.mod`)
 
 **Testing:**
-- Ginkgo v2 (v2.28.1 in fulfillment-service, v2.27.2 in osac-operator) - BDD testing framework
-- Gomega v1.39+ - Assertion library
+- Ginkgo v2.32.0 - BDD testing framework (same version across all repos)
+- Gomega v1.42.1 - Assertion library
 - Kind (Kubernetes-in-Docker) - Container-based Kubernetes clusters for integration tests (`fulfillment-service/internal/testing/kind.go`)
 
 **Build/Dev:**
@@ -57,9 +63,9 @@
 ## Key Dependencies
 
 **Critical:**
-- google.golang.org/protobuf v1.36.11 - Protocol Buffer runtime (`fulfillment-service/go.mod`)
-- jackc/pgx/v5 v5.9.1 - PostgreSQL driver (`fulfillment-service/go.mod`)
-- open-policy-agent/opa v1.14.1 - Authorization and policy evaluation (`fulfillment-service/go.mod`)
+- google.golang.org/protobuf v1.36.12 - Protocol Buffer runtime (`fulfillment-service/go.mod`)
+- jackc/pgx/v5 v5.10.0 - PostgreSQL driver (`fulfillment-service/go.mod`)
+- open-policy-agent/opa v1.18.2 - Authorization and policy evaluation (`fulfillment-service/go.mod`)
 - golang-jwt/jwt v5.3.1 - JWT token handling (`fulfillment-service/go.mod`)
 
 **Infrastructure:**
@@ -78,12 +84,11 @@
 - pydantic v2.11.3+ - Data validation framework (`osac-aap/pyproject.toml`)
 
 **Networking:**
-- Envoy Control Plane (envoyproxy/go-control-plane v1.37.0) - Service proxy configuration (`fulfillment-service/go.mod`)
 - envoyproxy/protoc-gen-validate - Protocol Buffer validation (`fulfillment-service/go.mod`)
 - dnspython - DNS manipulation library (`osac-aap/pyproject.toml`)
 
 **Development Utilities:**
-- google/cel-go v0.27.0 - Common Expression Language for filtering and authorization (`fulfillment-service/go.mod`)
+- google/cel-go v0.29.2 - Common Expression Language for filtering and authorization (`fulfillment-service/go.mod`)
 - go.uber.org/mock v0.6.0 - Mock code generation (`fulfillment-service/go.mod`)
 
 ## Configuration
@@ -103,19 +108,15 @@ Services accept command-line flags rather than environment variables directly:
 - Containerfile (Podman/Docker) - Container image definitions
 
 **Kubernetes Deployment:**
-- Helm charts in `fulfillment-service/charts/` - Service deployment manifests
-  - Service Helm chart: `charts/service/`
-  - Keycloak Helm chart: `charts/keycloak/` (for authentication)
-  - Prometheus Helm chart: `charts/prometheus/` (for monitoring)
-  - CA Helm chart: `charts/ca/` (certificate authority setup)
+- Helm chart in `fulfillment-service/charts/service/` - Service deployment manifests
 - Kustomize overlays in `fulfillment-service/manifests/` - Alternative deployment approach
   - Kind overlay for local testing
 
 ## Platform Requirements
 
 **Development:**
-- Go 1.25.0
-- Python 3.13+
+- Go 1.26.3
+- Python 3.14+ (fulfillment-service tooling), 3.13+ (osac-aap), 3.11+ (osac-test-infra)
 - Kubernetes cluster (Kind for local testing) or access to OpenShift cluster
 - PostgreSQL 15+ (container-based for local development)
 - Protocol Buffer compiler (protoc) with Buf
@@ -128,8 +129,7 @@ Services accept command-line flags rather than environment variables directly:
 - Helm 3.x for deployment
 - Keycloak for identity provider integration
 - Prometheus for metrics collection (optional but recommended)
-- Envoy Gateway for advanced traffic management
 
 ---
 
-*Stack analysis: 2026-03-30*
+*Stack analysis: 2026-07-27*

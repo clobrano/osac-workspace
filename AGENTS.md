@@ -88,16 +88,6 @@ make install                          # Install CRDs
 make deploy IMG=<registry>/osac-operator:tag
 ```
 
-### CI
-
-The workspace runs these GitHub Actions workflows:
-- `pr-dashboard.yml` — generates a PR dashboard (runs on schedule, deploys to GitHub Pages via `tools/pr-notify/generate.py`)
-- `skillsaw.yml` — lints AI skills on PRs
-- `skillsaw-review.yml` — posts inline PR comments from skillsaw lint
-- `claude-hooks-smoke.yml` — validates Claude Code hooks
-
-Component repos have their own CI pipelines.
-
 ## Code Style
 
 ### Git Workflow
@@ -126,7 +116,7 @@ Link PRs in descriptions: "Depends on fulfillment-service#123".
 - **New AAP roles or collections** in `osac-aap` → bump the submodule ref in `osac-installer`
 - **New CRD types** in `osac-operator` → register in the fulfillment-service reconciler
 
-Failing to update `osac-installer` after cross-component changes causes CI failures and deployment mismatches. See `.planning/codebase/CONVENTIONS.md` for the full cross-repo dependency table.
+Failing to update `osac-installer` after cross-component changes causes CI failures and deployment mismatches. See `reference/CONVENTIONS.md` for the full cross-repo dependency table.
 
 ## Enhancement Proposals
 
@@ -174,7 +164,6 @@ For features involving the fulfillment-service API (proto definitions, services,
 
 - OSAC uses Jira **Tasks** (not Stories) for implementation work — in the **implement** workflow, "story" references mean Tasks in this project
 - Use `jira` CLI for Jira access (e.g., `jira issue view OSAC-1234 --plain`), not Jira MCP
-- Planning artifacts live in `.planning/`
 
 ## AI-Assisted Workflows
 
@@ -247,25 +236,6 @@ OSAC skills are workspace operators, not isolated skill bundles:
 | Bad examples in calibration text | Backtick the quoted phrase | `` `handle edge cases appropriately` `` |
 
 Put `CRITICAL` / `IMPORTANT` rules in the first 20% of `SKILL.md` (skillsaw `content-critical-position`). When stating a prohibition, include the required alternative (for example: do Y instead of X). When lint forces a trade-off between passing and preserving operational guidance, preserve the guidance and adjust config or formatting.
-
-### Available Skills
-
-**OSAC repo-local skills** (in `skills/`):
-
-- **create-pr** — Fork-based PR creation on component repos
-- **report-bug** — File a Jira bug without fixing
-- **quick-fix** — Unattended bug fix with Jira ticket and PR
-- **osac-feature** — Create OSAC Jira Features
-- **jira-task-management** — Manage Jira issues via jira-cli
-- **capture-tasks-from-meeting-notes** — Extract action items from meeting notes into Jira
-- **generate-status-report** — Generate project status reports from Jira
-- **design-review** — Review design documents against template requirements and architectural patterns
-- **prd-review** — Review PRDs
-- **milestone-scope** — Milestone readiness assessment
-- **osac-demo-recording** — asciinema API demo recordings
-- **presentation** — Red Hat Marp slide decks
-- **osac-cluster** — Boot and manage OSAC development clusters via cluster-tool
-- **osac-release** — Publish OSAC Helm chart versions across component repos
 
 ## Architecture
 
@@ -355,40 +325,4 @@ kubectl apply -k fulfillment-service/manifests
 export token=$(kubectl create token -n osac client)
 export route=$(kubectl get route -n osac fulfillment-api -o json | jq -r '.spec.host')
 grpcurl -insecure -H "Authorization: Bearer ${token}" ${route}:443 osac.public.v1.VirtualNetworks/List
-```
-
-## Reference Documentation
-
-| Location | Content |
-|----------|---------|
-| `.planning/codebase/ARCHITECTURE.md` | System design and layers |
-| `.planning/codebase/CONVENTIONS.md` | Naming and coding patterns |
-| `.planning/codebase/STACK.md` | Technology stack |
-| `.planning/codebase/TESTING.md` | Test patterns and frameworks |
-| `.planning/codebase/STRUCTURE.md` | File organization |
-| [`docs/architecture/`](https://github.com/osac-project/docs/tree/main/architecture) | High-level diagrams and design documents |
-| [`enhancement-proposals/`](https://github.com/osac-project/enhancement-proposals) | RFCs and design proposals |
-
-## Workspace Layout
-
-```text
-bootstrap.sh              # Clone/update all component repos
-Makefile                   # Distrobox dev environment targets
-Containerfile              # Dev container image (Fedora 42 + all tools)
-AGENTS.md                  # Tool-agnostic project conventions (this file)
-CLAUDE.md                  # Claude Code project instructions
-.claude/settings.json      # Pre-approved shell commands
-.claude/rules/             # Architecture, protobuf, cross-repo conventions
-.claude/hooks/             # Workflow hooks
-.design/templates/         # Section guidance override
-.design/context/           # Feature dimensions and review patterns
-skills/                    # AI skills (PRD/design workflows, Jira, bug fix, demo recording)
-tools/pr-notify/           # PR dashboard generator
-docs/pr-dashboard/         # Static site for PR dashboard (GitHub Pages)
-osac-docs/                 # Architecture docs and guides
-enhancement-proposals/     # Design documents and RFCs
-presentations/             # Slide decks and demo materials
-evals/                     # AI skill evaluation data
-kind-dev/                  # Local Kind cluster dev configs
-.github/workflows/         # CI (pr-dashboard, skillsaw, hooks smoke)
 ```

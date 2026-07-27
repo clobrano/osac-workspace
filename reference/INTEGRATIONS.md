@@ -1,6 +1,6 @@
 # External Integrations
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-07-27
 
 ## APIs & External Services
 
@@ -9,6 +9,10 @@
   - SDK: github.com/openshift/hypershift/api - HyperShift for hosted control planes (`osac-operator/go.mod`)
   - SDK: github.com/openshift/api - OpenShift API extensions
   - Purpose: Cluster provisioning and management via HyperShift
+  - SDK: kubevirt.io/api v1.8.4 - KubeVirt VM management (`osac-operator/go.mod`)
+  - Purpose: ComputeInstance VM lifecycle via KubeVirt virtualization
+  - SDK: sigs.k8s.io/multicluster-runtime v0.24.1 - Hub/remote cluster operation (`osac-operator/go.mod`)
+  - Purpose: Management and workload cluster separation for multi-cluster controllers
 
 **Infrastructure Provisioning:**
 - AWS (Amazon Web Services)
@@ -42,7 +46,6 @@
   - Purpose: Advanced SDN networking for Kubernetes
 
 - Envoy Gateway
-  - SDK: github.com/envoyproxy/go-control-plane/envoy - Service proxy control
   - Configuration: Via Authorino AuthConfig manifests (`fulfillment-service/charts/service/templates/grpc-server/authconfig.yaml`)
   - Purpose: TLS/SNI routing, advanced traffic management
 
@@ -68,7 +71,6 @@
 **Auth Provider:**
 - Keycloak (Optional, configurable)
   - Implementation: JWT token validation
-  - Helm chart: `fulfillment-service/charts/keycloak/`
   - Auth types: guest (no auth) or external (JWT-based)
   - Configuration: `--grpc-authn-type` flag (guest or external) and `--grpc-authn-external-address` flag
   - Location: `fulfillment-service/internal/auth/`
@@ -117,8 +119,6 @@
 - Prometheus
   - Client: github.com/prometheus/client_golang v1.23.2
   - Metrics endpoint: `/metrics` on metrics listener (default `localhost:8080`)
-  - Helm chart: `fulfillment-service/charts/prometheus/`
-  - Configuration: `fulfillment-service/charts/prometheus/files/prometheus.yml`
   - gRPC metrics: Automatic collection via interceptor chain (`fulfillment-service/internal/metrics/grpc_metrics_interceptor.go`)
   - Purpose: Performance monitoring, request latency, error rates
 
@@ -189,7 +189,7 @@
 - Kind (Kubernetes-in-Docker) cluster named `fulfillment-service-it`
 - Requires `/etc/hosts` entries:
   - `127.0.0.1 keycloak.keycloak.svc.cluster.local`
-  - `127.0.0.1 fulfillment-api.innabox.svc.cluster.local`
+  - `127.0.0.1 fulfillment-api.osac.svc.cluster.local`
 - Deployment modes: Helm (default) or Kustomize (`IT_DEPLOY_MODE` env var)
 - Cluster preservation: `IT_KEEP_KIND=true` for debugging
 
@@ -205,4 +205,4 @@ podman run -d --name postgresql_database \
 
 ---
 
-*Integration audit: 2026-03-30*
+*Integration audit: 2026-07-27*

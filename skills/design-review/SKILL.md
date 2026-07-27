@@ -52,7 +52,7 @@ Before reviewing, read these files if they exist:
 
 1. `.design/context/osac-dimensions.md` — services, personas, cross-cutting dimensions
 2. `.design/context/review-patterns.md` — reviewer feedback themes, anti-patterns, design reference library
-3. `.planning/codebase/ARCHITECTURE.md` — system architecture for technical grounding
+3. `reference/ARCHITECTURE.md` — system architecture for technical grounding
 4. `docs/personas.md` — canonical OSAC persona definitions
 
 ## Scoring Rubric

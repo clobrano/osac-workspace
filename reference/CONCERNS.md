@@ -1,6 +1,6 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-07-27
 
 ## Tech Debt
 
@@ -8,7 +8,7 @@
 
 **Area:** Event Notification System
 
-**Issue:** The `GenericServer[O]` in `fulfillment-service/internal/servers/generic_server.go` contains hard-coded type switches for event payload handling. These type switches couple the generic server to specific message types (ClusterTemplate, Cluster, HostClass, Host, HostPool, Hub, ComputeInstanceTemplate, ComputeInstance, NetworkClass, VirtualNetwork, Subnet, SecurityGroup), breaking the abstraction.
+**Issue:** The `GenericServer[O]` in `fulfillment-service/internal/servers/generic_server.go` contains hard-coded type switches for event payload handling. These type switches couple the generic server to specific message types (ClusterTemplate, Cluster, HostClass, Host, Hub, ComputeInstanceTemplate, ComputeInstance, NetworkClass, VirtualNetwork, Subnet, SecurityGroup), breaking the abstraction.
 
 **Files:**
 - `fulfillment-service/internal/servers/generic_server.go` (lines 669-691, 693-730)
@@ -53,11 +53,10 @@
 
 **Area:** Kubernetes Operator Feedback
 
-**Issue:** The `feedback_controller.go` and `hostpool_feedback_controller.go` in osac-operator have unimplemented phase mappings. Specifically, `ClusterOrderPhaseDeleting` has no equivalent phase in the fulfillment service, and the code just returns without updating status.
+**Issue:** The `feedback_controller.go` in osac-operator has unimplemented phase mappings. Specifically, `ClusterOrderPhaseDeleting` has no equivalent phase in the fulfillment service, and the code just returns without updating status.
 
 **Files:**
 - `osac-operator/internal/controller/feedback_controller.go` (line 269)
-- `osac-operator/internal/controller/hostpool_feedback_controller.go` (line 264)
 
 **Impact:**
 - Clusters in "Deleting" phase will not have their status synced to the fulfillment service
@@ -256,7 +255,7 @@
 - `osac-operator/internal/controller/*_controller_test.go`
 
 **Why Fragile:**
-- Generated template code contains multiple `TODO(user):` comments (lines 42, 73, 95 in `hostpool_controller_test.go`)
+- Generated template code contains multiple `TODO(user):` comments
 - Tests are incomplete and never fully implemented — assertions are empty or placeholder
 - Each controller test file copies the same pattern, creating maintenance burden
 - If the template changes, multiple test files get out of sync
@@ -296,7 +295,7 @@
 
 **Limit:** The `GenericServer.setPayload()` method has explicit case statements for each resource type. Supporting more than ~15-20 resource types becomes unwieldy.
 
-**Current Count:** 12 resource types (ClusterTemplate, Cluster, HostClass, Host, HostPool, Hub, ComputeInstanceTemplate, ComputeInstance, NetworkClass, VirtualNetwork, Subnet, SecurityGroup)
+**Current Count:** 30+ resource types (ClusterTemplate, Cluster, HostClass, Host, Hub, ComputeInstanceTemplate, ComputeInstance, NetworkClass, VirtualNetwork, Subnet, SecurityGroup, and others)
 
 **Scaling Path:**
 - Implement type registry pattern: `EventPayloadHandler` interface with `Handle(msg proto.Message, event *Event) error`
@@ -343,14 +342,14 @@
 
 ### OPA Version Constraint
 
-**Risk:** Uses `open-policy-agent/opa v1.14.1`. OPA updates may change policy syntax or require policy rewrites.
+**Risk:** Uses `open-policy-agent/opa v1.18.2`. OPA updates may change policy syntax or require policy rewrites.
 
 **Files:**
-- `fulfillment-service/go.mod` lists `github.com/open-policy-agent/opa v1.14.1`
+- `fulfillment-service/go.mod` lists `github.com/open-policy-agent/opa v1.18.2`
 - `fulfillment-service/charts/service/templates/grpc-server/authconfig.yaml` contains Rego policies
 
 **Current Mitigation:**
-- OPA 1.14.x is stable and widely used
+- OPA 1.18.x is stable and widely used
 - Policies use standard Rego (not bleeding-edge syntax)
 
 **Recommendations:**
@@ -394,7 +393,6 @@
 
 **Files:**
 - `osac-operator/internal/controller/feedback_controller.go` — `syncPhase()` logic incomplete
-- `osac-operator/internal/controller/hostpool_feedback_controller.go` — `syncPhase()` has TODO
 - `osac-operator/internal/controller/clusterorder_controller.go` — complex reconciliation loop
 
 **Risk:**
@@ -476,4 +474,4 @@
 
 ---
 
-*Concerns audit: 2026-03-30*
+*Concerns audit: 2026-07-27*

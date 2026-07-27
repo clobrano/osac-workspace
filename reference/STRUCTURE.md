@@ -1,6 +1,6 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-07-27
 
 ## Directory Layout
 
@@ -16,28 +16,40 @@ osac-project/                          # Monorepo root
 │   ├── docs/                          # API documentation
 │   └── go.mod                         # Go module definition
 ├── osac-operator/                     # Kubernetes operator
-│   ├── cmd/                           # Operator binary entry point
+│   ├── cmd/                           # Operator binary + console-proxy
 │   ├── api/                           # Kubernetes CRD definitions
 │   ├── internal/                      # Private implementation
+│   ├── pkg/                           # Shared packages (provisioning, aap)
 │   ├── config/                        # Kustomize configuration
 │   ├── test/                          # E2E and unit tests
 │   └── go.mod                         # Go module definition
+├── bare-metal-fulfillment-operator/   # Bare metal host provisioning operator
+│   ├── cmd/                           # Operator binary entry point
+│   ├── api/                           # CRD definitions (BareMetalInstance, BareMetalPool)
+│   ├── internal/                      # Controllers, inventory, profile management
+│   ├── config/                        # Kustomize configuration
+│   └── charts/                        # Helm deployment manifests
 ├── osac-aap/                          # Ansible provisioning
 │   └── collections/                   # Ansible collection with roles/playbooks
 ├── osac-installer/                    # Installation manifests
 ├── osac-test-infra/                   # Integration test utilities
+├── osac-ui/                           # Web console (React, PatternFly 6)
+├── osac-ux/                           # Read-only UI reference (React 19, PatternFly 6)
+├── osac-csi-driver/                   # CSI storage driver
+├── osac-docs/                         # Architecture docs and guides
+├── host-management-openstack/         # Bare metal host management via OpenStack
+├── docs/                              # Additional documentation
 ├── enhancement-proposals/             # Design documents
 ├── CLAUDE.md                          # Project development guide
-└── .planning/                         # Planning and working notes (gitignored)
-    └── codebase/                      # Generated architecture docs
+└── reference/                         # Codebase reference docs (architecture, conventions, stack)
 ```
 
 ## Directory Purposes
 
 **fulfillment-service/cmd:**
-- Purpose: Binary entry points for service and CLI
-- Contains: main.go files for `fulfillment-service` and `fulfillment-cli`
-- Key files: `fulfillment-service/main.go`, `fulfillment-cli/main.go`
+- Purpose: Binary entry points for service, CLI, and dev tools
+- Contains: main.go files for `fulfillment-service`, `osac` (CLI), `osac-dev`, `buf-plugin-osac-lint`, and `test-server`
+- Key files: `cmd/fulfillment-service/main.go`, `cmd/osac/main.go`, `cmd/osac-dev/main.go`
 
 **fulfillment-service/internal/cmd:**
 - Purpose: Command hierarchy and CLI structure
@@ -83,7 +95,7 @@ osac-project/                          # Monorepo root
 **fulfillment-service/internal/controllers:**
 - Purpose: Resource reconciliation logic
 - Contains: Reconciler base class, resource-specific controller implementations
-- Subdirectories: `cluster/`, `computeinstance/`, `virtualnetwork/`, `subnet/`, `securitygroup/`, `hostpool/`, `host/`, `finalizers/`
+- Subdirectories: `cluster/`, `computeinstance/`, `virtualnetwork/`, `subnet/`, `securitygroup/`, `publicip/`, `publicippool/`, `publicipattachment/`, `externalip/`, `externalippool/`, `externalipattachment/`, `natgateway/`, `baremetalinstance/`, `tenant/`, `onboarding/`, `project/`, `projectmembership/`, `user/`, `role/`, `rolebinding/`, `identityprovider/`, `finalizers/`
 - Key file: `reconciler.go` (generic reconciliation framework)
 
 **fulfillment-service/internal/kubernetes:**
@@ -113,8 +125,8 @@ osac-project/                          # Monorepo root
 
 **fulfillment-service/charts:**
 - Purpose: Helm chart templates for deployment
-- Contains: Charts for service, Keycloak, Prometheus, CA
-- Subdirectories: `service/` (main service chart), `keycloak/`, `prometheus/`, `ca/`
+- Contains: Chart for the main service
+- Subdirectories: `service/` (main service chart)
 
 **fulfillment-service/manifests:**
 - Purpose: Kustomize-based deployment manifests
@@ -127,30 +139,38 @@ osac-project/                          # Monorepo root
 - Key files: Auto-generated during build
 
 **osac-operator/cmd:**
-- Purpose: Operator binary entry point
-- Contains: main.go with operator initialization and controller setup
-- Key file: `main.go` (500+ lines with full operator bootstrap)
+- Purpose: Operator binary entry points
+- Contains: main.go with operator initialization and controller setup, plus console-proxy
+- Key files: `main.go` (operator bootstrap), `console-proxy/` (console proxy binary)
 
 **osac-operator/api/v1alpha1:**
-- Purpose: Kubernetes CRD definitions (ClusterOrder, HostPool, ComputeInstance, etc.)
+- Purpose: Kubernetes CRD definitions (ClusterOrder, ComputeInstance, Tenant, networking, IP resources, etc.)
 - Contains: Go structs defining CustomResource types
-- Key files: `clusterorder_types.go`, `hostpool_types.go`, `computeinstance_types.go`
+- Key files: `clusterorder_types.go`, `computeinstance_types.go`, `tenant_types.go`, `virtualnetwork_types.go`, `subnet_types.go`, `securitygroup_types.go`, `publicip_types.go`, `publicippool_types.go`, `publicipattachment_types.go`, `externalip_types.go`, `externalippool_types.go`, `externalipattachment_types.go`, `natgateway_types.go`, `job_types.go`
 
 **osac-operator/internal/controller:**
-- Purpose: Kubernetes controller implementations
-- Contains: Resource-specific controllers and feedback controllers
-- Subdirectories: `clusterorder/`, `hostpool/`, `computeinstance/`, `tenant/`, `virtualnetwork/`, `subnet/`, `securitygroup/`
+- Purpose: Kubernetes controller implementations (flat structure, no subdirectories)
+- Contains: Resource-specific controllers and feedback controllers for all resource types
+- Resources: clusterorder, computeinstance, tenant, virtualnetwork, subnet, securitygroup, publicip, publicippool, publicipattachment, externalip, externalippool, externalipattachment, natgateway, baremetalinstance (feedback only), storage
 - Key files: `*_controller.go` (main controller), `*_feedback_controller.go` (feedback from provisioning)
 
-**osac-operator/internal/provisioning:**
+**osac-operator/pkg/provisioning:**
 - Purpose: Provisioning backend abstraction
 - Contains: Provider interfaces, AAP provider, EDA webhook provider
 - Key files: `provider.go` (interface), `aap_provider.go`, `eda_provider.go`
 
-**osac-operator/internal/aap:**
+**osac-operator/pkg/aap:**
 - Purpose: Ansible Automation Platform integration
 - Contains: AAP client, template resolution, job submission
 - Key files: `client.go`
+
+**osac-operator/internal/consoleproxy:**
+- Purpose: Console proxy implementation for VM console access
+- Contains: Proxy server logic for the console-proxy binary
+
+**osac-operator/internal/migrations:**
+- Purpose: CRD migration logic
+- Contains: Migration helpers for CRD schema changes
 
 **osac-operator/config/crd:**
 - Purpose: Custom Resource Definition manifests
@@ -161,6 +181,26 @@ osac-project/                          # Monorepo root
 - Purpose: Role-based access control
 - Contains: ClusterRole, ClusterRoleBinding, ServiceAccount manifests
 - Generated from controller-gen markers in code
+
+**bare-metal-fulfillment-operator/cmd:**
+- Purpose: Operator binary entry point
+- Contains: main.go with operator initialization
+- Key file: `main.go`
+
+**bare-metal-fulfillment-operator/api/v1alpha1:**
+- Purpose: Kubernetes CRD definitions for bare metal resources
+- Contains: Go structs defining `BareMetalInstance` and `BareMetalPool` types
+- Key files: `baremetalinstance_types.go`, `baremetalpool_types.go`
+
+**bare-metal-fulfillment-operator/internal/controller:**
+- Purpose: Kubernetes controller implementations for bare metal resources
+- Contains: Controllers for BareMetalInstance and BareMetalPool reconciliation
+- Key files: `baremetalinstance_controller.go`, `baremetalpool_controller.go`
+
+**bare-metal-fulfillment-operator/internal:**
+- Purpose: Private implementation packages
+- Contains: Controller logic, inventory management, profile handling, shared helpers
+- Subdirectories: `controller/`, `inventory/`, `profile/`, `management/`, `helpers/`, `shared/`
 
 **osac-aap/collections/ansible_collections/massopencloud/esi:**
 - Purpose: Ansible collection for infrastructure provisioning
@@ -187,7 +227,7 @@ osac-project/                          # Monorepo root
 
 **Entry Points:**
 - `fulfillment-service/cmd/fulfillment-service/main.go`: Service binary entry
-- `fulfillment-service/cmd/fulfillment-cli/main.go`: CLI binary entry
+- `fulfillment-service/cmd/osac/main.go`: CLI binary entry
 - `osac-operator/cmd/main.go`: Operator entry point
 
 **Configuration:**
@@ -203,8 +243,8 @@ osac-project/                          # Monorepo root
 - `fulfillment-service/internal/servers/generic_server.go`: Generic CRUD server base
 - `fulfillment-service/internal/database/dao/generic_dao.go`: Generic data access object
 - `fulfillment-service/internal/controllers/reconciler.go`: Resource reconciliation base
-- `osac-operator/internal/provisioning/provider.go`: Provisioning provider interface
-- `osac-operator/internal/aap/client.go`: AAP integration
+- `osac-operator/pkg/provisioning/provider.go`: Provisioning provider interface
+- `osac-operator/pkg/aap/client.go`: AAP integration
 
 **Testing:**
 - `fulfillment-service/it/*_suite_test.go`: Integration test suites
@@ -252,7 +292,7 @@ osac-project/                          # Monorepo root
 
 4. **Controller (if operator-managed):**
    - `osac-operator/api/v1alpha1/loadbalancer_types.go` - CRD definition
-   - `osac-operator/internal/controller/loadbalancer/controller.go` - Controller implementation
+   - `osac-operator/internal/controller/loadbalancer_controller.go` - Controller implementation
    - `osac-operator/config/crd/bases/` - Generated CRD manifests
 
 5. **Tests:**
@@ -338,4 +378,4 @@ Key reference files for AI agents:
 
 ---
 
-*Structure analysis: 2026-03-30*
+*Structure analysis: 2026-07-27*
