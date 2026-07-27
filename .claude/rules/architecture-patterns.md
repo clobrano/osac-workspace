@@ -62,10 +62,10 @@ Parent-child relationships use owner reference annotations (`osac.openshift.io/o
 ## Detailed References
 
 For deeper architecture, conventions, and structure analysis:
-- `.planning/codebase/ARCHITECTURE.md` — system design and layers
-- `.planning/codebase/CONVENTIONS.md` — naming and coding patterns
-- `.planning/codebase/STACK.md` — technology stack details
-- `.planning/codebase/TESTING.md` — test patterns and frameworks
-- `.planning/codebase/STRUCTURE.md` — file organization
+- `reference/ARCHITECTURE.md` — system design and layers
+- `reference/CONVENTIONS.md` — naming and coding patterns
+- `reference/STACK.md` — technology stack details
+- `reference/TESTING.md` — test patterns and frameworks
+- `reference/STRUCTURE.md` — file organization
 - [`docs/architecture/`](https://github.com/osac-project/docs/tree/main/architecture) — high-level diagrams and design documents
 - [`enhancement-proposals/`](https://github.com/osac-project/enhancement-proposals) — RFCs and design proposals

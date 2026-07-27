@@ -10,9 +10,8 @@ kubeconfig
 # Go local workspace
 .local/
 
-# Planning artifacts (but keep codebase docs)
-.planning/*
-!.planning/codebase/
+# Planning artifacts (workflow config, not codebase docs — those are in reference/)
+.planning/
 
 # Claude Code (but keep hooks, settings, rules, workflows)
 .claude/*

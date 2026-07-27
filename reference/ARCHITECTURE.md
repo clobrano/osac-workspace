@@ -1,6 +1,6 @@
 # Architecture
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-07-27
 
 ## Pattern Overview
 
@@ -55,22 +55,31 @@
 
 **Authentication & Authorization:**
 - Purpose: Identity verification, tenancy enforcement, permission checks
-- Location: `fulfillment-service/internal/auth/`
-- Contains: Attribution logic (creator tracking), tenancy logic (tenant identification), OPA integration
+- Location: `fulfillment-service/internal/auth/`, `fulfillment-service/internal/idp/`, `fulfillment-service/internal/oauth/`
+- Contains: Attribution logic (creator tracking), tenancy logic (tenant identification), OPA integration, identity provider management, OAuth token handling
 - Depends on: JWT tokens, OpenPolicy Agent
 - Used by: Server layer, generic server infrastructure
+
+**Supporting Packages (fulfillment-service):**
+- `internal/console/` — VM console access support
+- `internal/events/` — Event tracking and publishing
+- `internal/rendering/` — Table rendering for CLI output (YAML-driven table definitions)
+- `internal/network/` — Network-related utilities
+- `internal/provisioners/` — Provisioner abstractions
+- `internal/computeinstancespec/` — ComputeInstance spec building
+- `internal/cache/`, `internal/collections/`, `internal/masks/`, `internal/templating/`, `internal/validation/` — Shared utilities
 
 **Controller Layer (Kubernetes Operators):**
 - Purpose: Reconciliation logic for resource provisioning and lifecycle management
 - Location: `osac-operator/internal/controller/`, `fulfillment-service/internal/controllers/`
-- Contains: Resource-specific controllers (Cluster, ComputeInstance, VirtualNetwork, etc.), feedback reconcilers
+- Contains: Resource-specific controllers and feedback reconcilers for 30+ resource types including Cluster, ComputeInstance, VirtualNetwork, Subnet, SecurityGroup, PublicIP/ExternalIP, PublicIPPool/ExternalIPPool, PublicIPAttachment/ExternalIPAttachment, NatGateway, Tenant, BaremetalInstance, Project, ProjectMembership, IdentityProvider, Role, RoleBinding, User, and more
 - Depends on: controller-runtime, provisioning providers, gRPC client to fulfillment service
 - Used by: Kubernetes operator manager
 
 **Provisioning Providers:**
 - Purpose: Pluggable backends for resource provisioning
-- Location: `osac-operator/internal/provisioning/`, `osac-operator/internal/aap/`
-- Contains: Provider interfaces, AAP client, EDA webhook client, template management
+- Location: `osac-operator/pkg/provisioning/`, `osac-operator/pkg/aap/`
+- Contains: Provider interface and factory, AAP provider, provisioning lifecycle helpers, extra vars context
 - Depends on: HTTP clients, Ansible API
 - Used by: Controllers for provision/deprovision operations
 
@@ -120,7 +129,7 @@
 ## Key Abstractions
 
 **Resource Object (Proto Message):**
-- Purpose: Represents infrastructure entities (Cluster, VirtualNetwork, ComputeInstance)
+- Purpose: Represents infrastructure entities across 35+ resource types spanning compute (Cluster, ComputeInstance, BaremetalInstance), networking (VirtualNetwork, Subnet, SecurityGroup, NatGateway, NetworkClass), IP management (PublicIP, PublicIPPool, PublicIPAttachment, ExternalIP, ExternalIPPool, ExternalIPAttachment), identity (Tenant, Project, User, Role, RoleBinding, ProjectMembership, IdentityProvider), catalog (ClusterCatalogItem, ComputeInstanceCatalogItem, BaremetalInstanceCatalogItem), templates (ClusterTemplate, ComputeInstanceTemplate, BaremetalInstanceTemplate), and platform (HostType, InstanceType, ClusterVersion, Hub, StorageBackend, StorageTier, Event, BreakGlassCredentials)
 - Examples: `fulfillment-service/proto/public/osac/public/v1/cluster_type.proto`, `virtual_network_type.proto`
 - Pattern: All have metadata (name, labels, annotations, timestamps), spec (user configuration), status (observed state)
 
@@ -146,8 +155,8 @@
 
 **Provisioning Provider:**
 - Purpose: Abstraction for different provisioning backends
-- Examples: `osac-operator/internal/provisioning/aap_provider.go`, `eda_provider.go`
-- Pattern: Interface with Provision/Deprovision/GetStatus methods; supports template-based execution
+- Examples: `osac-operator/pkg/provisioning/aap_provider.go`, `provider.go`, `factory.go`
+- Pattern: Interface with Provision/Deprovision/GetStatus methods; factory-based instantiation; provisioning lifecycle helpers for shared provision/deprovision flow
 
 ## Entry Points
 
@@ -170,31 +179,42 @@
 - Location: `fulfillment-service/internal/cmd/service/start/controller/`
 - Triggers: `fulfillment-service start controller` CLI command
 - Responsibilities: Run reconcilers for in-process resource monitoring and feedback
+- Controllers: 22+ resource-specific controllers in `internal/controllers/` covering baremetalinstance, cluster, computeinstance, externalip, externalipattachment, externalippool, identityprovider, natgateway, onboarding, project, projectmembership, publicip, publicipattachment, publicippool, role, rolebinding, securitygroup, subnet, tenant, user, virtualnetwork, plus finalizers management
 
 **osac-operator binary:**
 - Location: `osac-operator/cmd/main.go`
 - Triggers: Kubernetes operator deployment (helm/kustomize)
 - Responsibilities: Initialize multicluster manager, register controllers, set up gRPC client to fulfillment service, start reconciliation loops
 
-**Cluster Controller (Operator):**
+**Operator Controllers (osac-operator):**
 - Location: `osac-operator/internal/controller/`
-- Triggers: ClusterOrder resource created/updated in Kubernetes
-- Responsibilities: Check Hosted Control Planes readiness, trigger provisioning, update status, handle feedback
-
-**Compute Instance Controller (Operator):**
-- Location: `osac-operator/internal/controller/computeinstance/`
-- Triggers: ComputeInstance resource created/updated in Kubernetes or fulfillment service
-- Responsibilities: Create KubeVirt VM, attach to networks, apply security groups, monitor provisioning status
-
-**Networking Controllers (Operator):**
-- Location: `osac-operator/internal/controller/{virtualnetwork,subnet,securitygroup}`
-- Triggers: VirtualNetwork/Subnet/SecurityGroup resources via fulfillment service
-- Responsibilities: Translate logical network specs to AAP/EDA provisioning, track implementation status
+- Pattern: Each resource type has a primary controller and a feedback controller (e.g., `computeinstance_controller.go` + `computeinstance_feedback_controller.go`). A generic `feedback_controller.go` provides shared feedback logic.
+- **ClusterOrder**: Provisions OpenShift clusters via Hosted Control Planes
+- **ComputeInstance**: Creates KubeVirt VMs, attaches to networks, applies security groups
+- **Networking** (VirtualNetwork, Subnet, SecurityGroup, NatGateway): Translates logical network specs to AAP provisioning
+- **IP Management** (PublicIP, PublicIPPool, PublicIPAttachment, ExternalIP, ExternalIPPool, ExternalIPAttachment): Manages IP allocation and attachment lifecycle
+- **Tenant**: Reconciles tenant namespace isolation
+- **BaremetalInstance** (feedback only): Processes bare metal provisioning feedback
+- **Storage**: Resolves storage tier configuration
+- Triggers: Resource created/updated in Kubernetes or fulfillment service
+- Responsibilities: Reconcile spec vs status, trigger provisioning providers, send feedback signals
 
 **CLI binary:**
 - Location: `fulfillment-service/cmd/fulfillment-cli/main.go` → `internal/cmd/cli/Root()`
 - Triggers: Manual CLI invocation for cluster/host/compute instance management
 - Responsibilities: Provide kubectl-like CLI interface, call fulfillment service gRPC APIs
+
+**Console Proxy (Operator):**
+- Location: `osac-operator/cmd/console-proxy/main.go` → `internal/consoleproxy/`
+- Triggers: Deployed as a Kubernetes aggregated API server alongside the operator
+- Responsibilities: Provides WebSocket proxy for KubeVirt VM console and VNC access; handles authentication, discovery, health checks, and subresource routing
+
+**bare-metal-fulfillment-operator:**
+- Location: `bare-metal-fulfillment-operator/`
+- CRD types: BaremetalInstance, BaremetalPool (`api/v1alpha1/`)
+- Controllers: `baremetalinstance_controller.go`, `baremetalpool_controller.go` (`internal/controller/`)
+- Triggers: BaremetalInstance/BaremetalPool resources created/updated in Kubernetes
+- Responsibilities: Orchestrates bare metal host provisioning via Metal3 integration; manages pool-based allocation of bare metal hosts
 
 ## Error Handling
 
@@ -227,4 +247,4 @@
 
 ---
 
-*Architecture analysis: 2026-03-30*
+*Architecture analysis: 2026-07-27*

@@ -1,11 +1,11 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-07-27
 
 ## Test Framework
 
 **Runner:**
-- Ginkgo v2 (`github.com/onsi/ginkgo/v2`)
+- Ginkgo v2.32.0 (`github.com/onsi/ginkgo/v2`)
 - Config: No explicit config file; configuration via environment variables and code
 
 **Assertion Library:**
@@ -232,6 +232,21 @@ err = dao.CreateTables[*privatev1.Cluster](ctx)
 - Manual: Run `ginkgo` with `-cover` flag (not commonly used in this project)
 - Unit test coverage typically checked in CI/CD pipeline (not documented in CLAUDE.md)
 
+## Linting
+
+**fulfillment-service:**
+- Go + proto lint: `uv run dev.py lint` (runs Go linter and `buf lint`)
+- Proto only: `buf lint`
+- Python only: `uv run ruff check`
+- Pre-commit hooks run `buf lint` (proto) and Go lint automatically
+
+**osac-operator:**
+- Go lint: `make lint` (golangci-lint)
+
+**osac-test-infra:**
+- Python lint: `make lint` (ruff check + ruff format --check)
+- Pre-commit: `pre-commit run --all-files` (yamllint, ansible-lint, standard hooks)
+
 ## Test Types
 
 **Unit Tests:**
@@ -249,16 +264,45 @@ err = dao.CreateTables[*privatev1.Cluster](ctx)
 - Command: `ginkgo run it`
 - Infrastructure requirements:
   - Kind cluster named `fulfillment-service-it`
-  - `/etc/hosts` entries for DNS resolution
+  - `/etc/hosts` entries for DNS resolution:
+    - `127.0.0.1 keycloak.keycloak.svc.cluster.local`
+    - `127.0.0.1 fulfillment-api.osac.svc.cluster.local`
+    - `127.0.0.1 fulfillment-internal-api.osac.svc.cluster.local`
   - Keycloak deployment for auth
   - PostgreSQL for data storage
   - Helm/Kustomize for application deployment
 - Example: `it_access_test.go` tests API access control across public/private endpoints with real clients
 
-**E2E Tests:**
-- Framework: Ginkgo v2 (same as integration tests)
-- Not separately distinguished from integration tests
-- Full system testing happens in `it/` test suite
+**E2E Tests (osac-test-infra):**
+- Framework: pytest with pytest-xdist (parallel execution, default 4 workers)
+- Location: `osac-test-infra/tests/` (separate repo)
+- Test suites: `vmaas/` (ComputeInstance), `caas/` (ClusterOrder), `storage/` (tenant storage), `catalog/` (CatalogItem)
+- Client abstractions: `tests/core/` (GRPCClient, K8sClient, OsacCLI, polling helpers)
+- Session fixtures: gRPC client, K8s client, CLI wrapper, JWT tokens (`tests/conftest.py`)
+- Two-kubeconfig design: hub cluster (CRs) + workload cluster (VMs via `OSAC_VM_KUBECONFIG`)
+- Run commands:
+  ```bash
+  cd osac-test-infra
+  uv sync
+  make test                                    # All suites (parallel, 4 workers)
+  make test-vmaas                              # VMaaS suite
+  make test-caas                               # CaaS suite
+  make test-storage                            # Storage suite
+  TEST=test_compute_instance_lifecycle make test-vmaas  # Single test filter
+  uv run pytest tests/vmaas/ -v --tb=short -n 0        # Sequential (debugging)
+  ```
+- Lint: `make lint` (ruff check + ruff format --check)
+- Dependencies: pytest>=8.0, pytest-xdist>=3.0, pyyaml>=6.0, websocket-client>=1.6
+
+**osac-operator Tests:**
+- Framework: Ginkgo + Gomega with envtest (real etcd + kube-apiserver)
+- Unit tests: `make test` (runs `go test` excluding `test/integration/`, with coverage)
+- Integration tests: `make test-integration` (runs test + test-kustomize + test-smoke)
+- Kustomize validation: `make test-kustomize` (catches missing files in kustomization.yaml)
+- Smoke test: `make test-smoke` (creates kind cluster `osac-test`, applies CRDs, verifies)
+- Kind integration: `make test-integration-kind` (`go test ./test/integration/ -v -ginkgo.v`)
+- Lint: `make lint` (golangci-lint)
+- Clean up: `kind delete cluster --name osac-test`
 
 ## Common Patterns
 
@@ -382,4 +426,4 @@ var _ = BeforeSuite(func() {
 
 ---
 
-*Testing analysis: 2026-03-30*
+*Testing analysis: 2026-07-27*

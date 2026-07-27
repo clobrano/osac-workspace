@@ -1,6 +1,6 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-07-27
 
 ## Naming Patterns
 
@@ -203,4 +203,4 @@ Evidence: MGMT-24226 eval scored 3/5 because the agent fixed `fulfillment-servic
 
 ---
 
-*Convention analysis: 2026-03-30*
+*Convention analysis: 2026-07-27*
