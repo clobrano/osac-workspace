@@ -326,5 +326,3 @@ export token=$(kubectl create token -n osac client)
 export route=$(kubectl get route -n osac fulfillment-api -o json | jq -r '.spec.host')
 grpcurl -insecure -H "Authorization: Bearer ${token}" ${route}:443 osac.public.v1.VirtualNetworks/List
 ```
-
-

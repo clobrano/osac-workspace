@@ -281,6 +281,7 @@ err = dao.CreateTables[*privatev1.Cluster](ctx)
 - Session fixtures: gRPC client, K8s client, CLI wrapper, JWT tokens (`tests/conftest.py`)
 - Two-kubeconfig design: hub cluster (CRs) + workload cluster (VMs via `OSAC_VM_KUBECONFIG`)
 - Run commands:
+
   ```bash
   cd osac-test-infra
   uv sync
@@ -291,6 +292,7 @@ err = dao.CreateTables[*privatev1.Cluster](ctx)
   TEST=test_compute_instance_lifecycle make test-vmaas  # Single test filter
   uv run pytest tests/vmaas/ -v --tb=short -n 0        # Sequential (debugging)
   ```
+
 - Lint: `make lint` (ruff check + ruff format --check)
 - Dependencies: pytest>=8.0, pytest-xdist>=3.0, pyyaml>=6.0, websocket-client>=1.6
 

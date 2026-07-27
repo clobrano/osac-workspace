@@ -49,7 +49,7 @@ osac-project/                          # Monorepo root
 **fulfillment-service/cmd:**
 - Purpose: Binary entry points for service, CLI, and dev tools
 - Contains: main.go files for `fulfillment-service`, `osac` (CLI), `osac-dev`, `buf-plugin-osac-lint`, and `test-server`
-- Key files: `fulfillment-service/main.go`, `osac/main.go`, `osac-dev/main.go`
+- Key files: `cmd/fulfillment-service/main.go`, `cmd/osac/main.go`, `cmd/osac-dev/main.go`
 
 **fulfillment-service/internal/cmd:**
 - Purpose: Command hierarchy and CLI structure
@@ -189,7 +189,7 @@ osac-project/                          # Monorepo root
 
 **bare-metal-fulfillment-operator/api/v1alpha1:**
 - Purpose: Kubernetes CRD definitions for bare metal resources
-- Contains: Go structs defining BareMetalInstance and BareMetalPool types
+- Contains: Go structs defining `BareMetalInstance` and `BareMetalPool` types
 - Key files: `baremetalinstance_types.go`, `baremetalpool_types.go`
 
 **bare-metal-fulfillment-operator/internal/controller:**

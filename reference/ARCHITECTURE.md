@@ -188,7 +188,7 @@
 
 **Operator Controllers (osac-operator):**
 - Location: `osac-operator/internal/controller/`
-- Pattern: Each resource type has a primary controller and a feedback controller (e.g., `computeinstance_controller.go` + `computeinstance_feedback_controller.go`). A generic `feedback_controller.go` provides shared feedback logic.
+- Pattern: Most resource types have a primary controller and a feedback controller (e.g., `computeinstance_controller.go` + `computeinstance_feedback_controller.go`). Exceptions: BaremetalInstance has a feedback controller only, and Storage has a standalone controller with no feedback pair. A generic `feedback_controller.go` provides shared feedback logic.
 - **ClusterOrder**: Provisions OpenShift clusters via Hosted Control Planes
 - **ComputeInstance**: Creates KubeVirt VMs, attaches to networks, applies security groups
 - **Networking** (VirtualNetwork, Subnet, SecurityGroup, NatGateway): Translates logical network specs to AAP provisioning
@@ -200,7 +200,7 @@
 - Responsibilities: Reconcile spec vs status, trigger provisioning providers, send feedback signals
 
 **CLI binary:**
-- Location: `fulfillment-service/cmd/fulfillment-cli/main.go` → `internal/cmd/cli/Root()`
+- Location: `fulfillment-service/cmd/osac/main.go` → `internal/cmd/cli/Root()`
 - Triggers: Manual CLI invocation for cluster/host/compute instance management
 - Responsibilities: Provide kubectl-like CLI interface, call fulfillment service gRPC APIs
 
@@ -211,10 +211,10 @@
 
 **bare-metal-fulfillment-operator:**
 - Location: `bare-metal-fulfillment-operator/`
-- CRD types: BaremetalInstance, BaremetalPool (`api/v1alpha1/`)
+- CRD types: BareMetalInstance, BareMetalPool (`api/v1alpha1/`)
 - Controllers: `baremetalinstance_controller.go`, `baremetalpool_controller.go` (`internal/controller/`)
-- Triggers: BaremetalInstance/BaremetalPool resources created/updated in Kubernetes
-- Responsibilities: Orchestrates bare metal host provisioning via Metal3 integration; manages pool-based allocation of bare metal hosts
+- Triggers: BareMetalInstance/BareMetalPool resources created/updated in Kubernetes
+- Responsibilities: Orchestrates bare-metal host provisioning via Metal3 integration; manages pool-based allocation of bare-metal hosts
 
 ## Error Handling
 

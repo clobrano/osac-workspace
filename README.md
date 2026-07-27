@@ -75,7 +75,7 @@ This workspace provides a pre-configured AI-assisted development environment:
 | `.claude/settings.json` | Pre-approved shell commands (git, ls, cat, etc.) so Claude doesn't prompt for routine operations |
 | `AI-assisted-development-workflow.md` | AI-assisted development workflow: Feature → PRD → Design → Jira sync → Implement |
 | `skills/` | Canonical OSAC skill definitions (Jira, PRs, design review, release, demos) plus bootstrap-managed ai-workflows symlinks |
-| `.gitignore` | Ignores cloned repos, `.claude/`, `.cursor/`, `.gemini/`, credentials, editor files, and build artifacts |
+| `.gitignore` | Ignores cloned repos, `.planning/`, `.claude/`, `.cursor/`, `.gemini/`, credentials, editor files, and build artifacts |
 
 ## Distrobox Dev Environment
 
