@@ -30,7 +30,7 @@ These apply across all sections:
 ### YAML Frontmatter
 
 - **title**: Lowercase slug with hyphens (e.g., `networking-api`, `bare-metal-fulfillment`)
-- **authors**: Email addresses (e.g., `agentil@redhat.com`)
+- **authors**: The human who owns or requested this feature — never the AI assistant. Derive from `git config user.email` if available; otherwise ask the user before continuing (e.g., `agentil@redhat.com`)
 - **creation-date**: ISO date format (YYYY-MM-DD)
 - **last-updated**: ISO date format, update when making significant changes
 - **tracking-link**: Full Jira URL (e.g., `https://redhat.atlassian.net/browse/OSAC-356`)
@@ -139,7 +139,7 @@ This is where technical depth lives. Include:
 
 ### Open Questions
 
-- Each open question gets its own numbered subsection.
+- Each open question gets its own numbered subsection with **Owner** (person or team who should answer) and **Impact** (which section or decision the answer affects). Derive the Owner from source material — do not default to the document's authors. If not evident, write "To be determined."
 - Frame as clear, answerable questions directed at reviewers.
 - **Transient by design.** When resolved during PR review, the answer is incorporated into the relevant section and the entry removed.
 - **Design scope only.** No process-level actions.
