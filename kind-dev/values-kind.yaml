@@ -105,7 +105,7 @@ bmf:
 
 # --- Bundled PostgreSQL ---
 bundledPostgres:
-  enabled: true
+  enabled: false
   database:
     name: service
     user: service
