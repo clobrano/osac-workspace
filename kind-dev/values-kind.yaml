@@ -27,6 +27,8 @@ operator:
   certs:
     issuerRef:
       name: default-ca
+  hubAccess:
+    enabled: true
 
 # --- Fulfillment Service ---
 service:
