@@ -1,6 +1,8 @@
 ---
 name: report-bug
 description: Report a bug in Jira without fixing it — creates a Bug ticket with proper description, links it to an epic, and assigns it. Use when the user says 'report a bug', 'file a bug', 'log a bug', 'open a bug ticket', or wants to track a bug without immediately writing a fix.
+metadata:
+  version: "0.1.0"
 ---
 
 # Report Bug
@@ -35,7 +37,7 @@ source of truth).
 
 ## Pre-Creation Check
 
-Describe from the user's perspective — what they did (CLI commands, API calls, UI actions), what they expected to happen, and what they saw happening (error messages, wrong behavior, missing data). Use product concepts (cluster, tenant, token), not code concepts (function names, file paths, database columns).
+Describe from the user's perspective — what they did (CLI commands, API calls, UI actions), what they expected to happen, and what they saw happening (error messages, wrong behavior, missing data). Use product concepts (cluster, tenant, token), not code concepts (function names, file paths, database columns). Limit the ticket body to user-visible symptoms: what the user did, what they expected, and what they saw.
 
 Before creating the ticket, verify you can answer these with user-facing information:
 
@@ -121,10 +123,12 @@ suggest_affects_version_from_parent() {
 
 **Do not call `jira issue create` until the user confirms.**
 
-Present a summary and wait for explicit approval:
+Present the full drafted ticket body alongside the summary metadata, and wait for explicit approval:
 
 ```text
 Ready to report bug in Jira:
+
+  <full drafted ticket body>
 
   Summary:         <bug summary>
   Epic:            <EPIC-KEY or none>
@@ -149,6 +153,8 @@ Only continue when the user answers yes.
 ## Create the Bug
 
 Use the safe create pattern in `jira-task-management` — source `tools/jira-safe-create.sh`, write the body to a temp file, run create directly (not inside `$(...)`), capture stdout/stderr separately:
+
+Use exactly these sections — no additions. Replace `<SKILL_VERSION>` in the trailer with this skill's `metadata.version` value:
 
 ```bash
 source "$(git rev-parse --show-toplevel)/tools/jira-safe-create.sh"
@@ -183,7 +189,7 @@ cat >"$BODY" <<'EOF'
 
 ---
 
-_This bug was reported with AI assistance. Review for accuracy_
+_This bug was reported with AI assistance (report-bug v<SKILL_VERSION>). Review for accuracy_
 EOF
 
 AFFECTS_VERSION_ARGS=()
