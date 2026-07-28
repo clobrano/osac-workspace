@@ -93,6 +93,8 @@ service:
 
 # --- AAP (disabled for kind) ---
 aap:
+  apiToken:
+    create: false
   aap:
     instance:
       enabled: false
