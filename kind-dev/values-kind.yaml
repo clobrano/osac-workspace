@@ -98,6 +98,9 @@ aap:
       enabled: false
   bootstrap:
     enabled: false
+  instanceGroups:
+    publishTemplates:
+      enabled: false
 
 # --- Bare Metal Fulfillment (disabled) ---
 bmf:
@@ -113,10 +116,6 @@ bundledPostgres:
 # --- Hub Access ---
 hubAccess:
   enabled: true
-
-# --- Publish Templates ---
-publishTemplates:
-  enabled: false
 
 # --- Validation hooks ---
 validation:
