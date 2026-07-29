@@ -38,13 +38,13 @@ Web-based tool for managing Enclave deployment configurations
 
 ## System Components
 
-```
+```text
 ┌─────────────────────────────────────────────────┐
 │  Enclave Wizard (deployed on LZ)                │
 │                                                  │
 │  ┌──────────────────┐      ┌─────────────────┐  │
 │  │  wizard-api      │      │  wizard-ui      │  │
-│  │  (Go binary)     │◄─────┤  (nginx)        │  │
+│  │  (Go binary)     │◄─────┤  (React SPA)    │  │
 │  │  systemd service │      │  podman quadlet │  │
 │  │  :8080           │      │  :3443 HTTPS    │  │
 │  │                  │      │  :3001 HTTP     │  │
@@ -196,7 +196,7 @@ Three complementary test approaches:
 2. **Bash E2E tests** — API contract verification (curl inside VM)
 3. **Playwright E2E tests** — Browser-driven UI flows
 
-**Test environment:** CentOS Stream 9 VM on remote libvirt host
+**Test environment:** Fedora 42 VM on remote libvirt host
 
 ---
 
