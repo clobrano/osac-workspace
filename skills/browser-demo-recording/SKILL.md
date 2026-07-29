@@ -88,29 +88,19 @@ async function clickNext(page) {
   // Use force:true — PatternFly overlays can intercept pointer events
   const cont = page.getByRole('button', { name: 'Continue' });
   const next = page.getByRole('button', { name: 'Next' });
-  if (await cont.isVisible()) {
+  // waitFor before branching — isVisible() is a one-shot check that
+  // returns immediately; without waiting the UI may still be settling.
+  try {
+    await cont.waitFor({ state: 'visible', timeout: 3000 });
     await cont.click({ force: true });
-  } else {
+  } catch {
+    await next.waitFor({ state: 'visible', timeout: 5000 });
     await next.click({ force: true });
   }
   await page.waitForLoadState('networkidle');
   await humanPause(rand(1500, 2500));
 }
 ```
-
-**Form validation bypass**: If the wizard has client-side validation that blocks navigation during recording, inject `?skip_validation` into the URL after login (when supported):
-
-```javascript
-await page.evaluate(() => {
-  const url = new URL(window.location);
-  if (!url.searchParams.has('skip_validation')) {
-    url.searchParams.set('skip_validation', '');
-    window.history.replaceState({}, '', url.toString());
-  }
-});
-```
-
-Don't navigate to the URL with `?skip_validation` directly — login redirects strip query params. Inject it via `replaceState` after login completes.
 
 **File uploads (PatternFly FileUpload)**: PF6 `FileUpload` components hide the native `<input type="file">`. Don't look for the input directly. Instead, wait for the step to render, then use the filechooser event:
 
@@ -125,7 +115,7 @@ const [fileChooser] = await Promise.all([
   page.waitForEvent('filechooser', { timeout: 10000 }),
   humanClick(page, uploadBtn),
 ]);
-await fileChooser.setFiles('/path/to/file.zip');
+await fileChooser.setFiles('/work/path/to/file.zip');
 ```
 
 **Large text fields** (pull secrets, SSH keys, YAML): Use `humanFill` (instant paste) instead of `humanType` (character-by-character) — typing a 2KB pull secret character by character takes minutes:
@@ -148,10 +138,11 @@ await humanFill(page, '#pull-secret', pullSecretContent);
 
 ```javascript
 const validateBtn = page.getByRole('button', { name: 'Validate' });
-if (await validateBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+try {
+  await validateBtn.waitFor({ state: 'visible', timeout: 5000 });
   await humanClick(page, validateBtn);
   await humanPause(3000);
-}
+} catch { /* button not present — skip */ }
 ```
 
 **Adding dynamic form entries** (nodes, hosts): Check if the entry already exists before clicking "Add":
@@ -159,12 +150,17 @@ if (await validateBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
 ```javascript
 for (let i = 0; i < hosts.length; i++) {
   const nameField = page.locator(`#node-${i}-name`);
-  if (!(await nameField.isVisible({ timeout: 500 }).catch(() => false))) {
+  try {
+    await nameField.waitFor({ state: 'visible', timeout: 500 });
+  } catch {
     const addBtn = page.getByRole('button', { name: 'Add node' });
-    if (await addBtn.isEnabled({ timeout: 1000 }).catch(() => false)) {
-      await humanClick(page, addBtn);
-      await humanPause(500);
-    }
+    try {
+      await addBtn.waitFor({ state: 'attached', timeout: 1000 });
+      if (await addBtn.isEnabled()) {
+        await humanClick(page, addBtn);
+        await humanPause(500);
+      }
+    } catch { /* no add button — skip */ }
   }
   await humanType(page, `#node-${i}-name`, hosts[i].name);
   // ... fill remaining fields
@@ -175,11 +171,12 @@ for (let i = 0; i < hosts.length; i++) {
 
 ```javascript
 const advancedToggle = page.locator('button:has-text("Advanced settings")').nth(i);
-if (await advancedToggle.isVisible({ timeout: 1000 }).catch(() => false)) {
+try {
+  await advancedToggle.waitFor({ state: 'visible', timeout: 1000 });
   await humanClick(page, advancedToggle);
   await humanPause(400);
   await humanType(page, `#node-${i}-rootdisk`, host.disk);
-}
+} catch { /* toggle not present — skip */ }
 ```
 
 **Selectors**: prefer `page.getByRole()` and `page.getByText()` over CSS selectors — they survive UI refactors better. Use `scripts/playwright.sh npx playwright codegen <URL>` to discover selectors interactively (requires X11).
@@ -288,7 +285,7 @@ async function humanSelect(page, selector, value) {
 scripts/playwright.sh node scripts/record-<slug>.mjs [URL]
 
 # With external file mounts (secrets, manifests)
-EXTRA_PODMAN_ARGS="-v $HOME/.ssh:/dot-ssh:ro,Z -v $HOME/src/secrets:/secrets:ro,Z" \
+EXTRA_PODMAN_ARGS="-v $HOME/.ssh/id_ed25519.pub:/dot-ssh/id_ed25519.pub:ro,Z -v $HOME/src/secrets:/secrets:ro,Z" \
   scripts/playwright.sh node scripts/record-<slug>.mjs [URL]
 
 # Or use a launcher script that sets up mounts (recommended)
@@ -386,7 +383,7 @@ Opens a browser with a recorder — click through the UI and it generates select
 | `ERR_MODULE_NOT_FOUND: playwright` | The container uses `createRequire` — don't use `import { chromium } from 'playwright'` |
 | Headed mode fails (no X server) | Use `headless: true` for scripted recordings — video output is identical |
 | `<div> intercepts pointer events` | Use `{ force: true }` on click — PatternFly overlays can block clicks |
-| Step transition doesn't advance | Form validation is blocking. Inject `?skip_validation` via `replaceState` (see above) |
+| Step transition doesn't advance | Form validation is blocking — fill required fields or use `{ force: true }` on click |
 | PF6 FileUpload: no `input[type="file"]` found | Use the `filechooser` event pattern (see File uploads above) |
 | Video is blank/black | Ensure `recordVideo` is on the context, not the page |
 | File too large | Lower resolution: `{ width: 1280, height: 720 }` |
