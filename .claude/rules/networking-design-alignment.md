@@ -26,7 +26,6 @@ This rule applies when working on any Jira issue that is networking-related. A t
 | **VMaaS Networking** | `OSAC-1435-vmaas-networking/design.md` | VM-specific: KubeVirt integration, OVN bridge, VM subnet attachment |
 | **CaaS Networking** | `OSAC-1436-caas-networking/design.md` | Cluster-specific: HCP node networking, cluster-to-fabric integration |
 | **BMaaS Networking** | `OSAC-1437-bmaas-networking/design.md` | Bare-metal-specific: BaremetalInstance, direct fabric attachment |
-| **Networking UI** | `OSAC-1425-networking-ui-vmaas-scope/design.md` | UI for networking resources (VMaaS scope) |
 | **DNS API** | `dns-api/README.md` | DNS record management |
 
 ### Key design decisions to align with
