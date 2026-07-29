@@ -43,7 +43,7 @@ These are non-negotiable architectural decisions from the merged designs:
 
 1. **Two-manager model**: `fabricManager` (Netris/Neutron — handles ALL physical networking) + optional `k8sManager` (bridges VMs to fabric via OVN). Never conflate the two.
 2. **VMs are part of the fabric**: VMs join the physical network through the K8s manager bridge. Once on the fabric, they are treated identically to bare-metal and cluster nodes.
-3. **ExternalIP replaces PublicIP**: The rename clarifies that addresses are external to the VirtualNetwork, not necessarily internet-routable. Both names coexist during migration (see memory: `publicip-to-externalip-migration`).
+3. **ExternalIP replaces PublicIP**: The rename clarifies that addresses are external to the VirtualNetwork, not necessarily internet-routable. Both names coexist during migration (see `OSAC-1433-unified-networking/design.md` for the rename and migration strategy).
 4. **Infrastructure-agnostic subnets**: The same Subnet can host VMs, BM servers, and cluster nodes. No per-service-type subnet variants.
 5. **Uniform API**: VirtualNetwork, Subnet, SecurityGroup, ExternalIP, NATGateway serve VMaaS, CaaS, and BMaaS identically — no service-specific resource types for networking.
 6. **One NetworkClass per deployment**: Provider-level CRD, tenants never interact with it.
