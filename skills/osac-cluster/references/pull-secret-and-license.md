@@ -2,10 +2,11 @@
 
 **Read this before `cluster-tool boot` or running refresh.**
 
-Both the `boot` command and the refresh script require a **pull secret** and an **AAP license**. Place these files in your local **osac-installer** clone under the values directory for your deployment type (paths below are relative to that repo — not `osac-workspace`):
+The `boot` command requires a **pull secret** for all deployment types. The **AAP license** is additionally required when running refresh to install VMaaS or CaaS. Place these files in your local **osac-installer** clone under the values directory for your deployment type (paths below are relative to that repo — not `osac-workspace`):
 
 | Deployment type | Pull secret path | AAP license path |
 |----------------|-----------------|-----------------|
+| SNO (bare) | `values/vmaas-ci/pull-secret.json` | Not needed (but required when installing VMaaS or CaaS via refresh — see their rows) |
 | VMaaS | `values/vmaas-ci/pull-secret.json` | `values/vmaas-ci/license.zip` |
 | CaaS | `values/caas-ci/pull-secret.json` | `values/caas-ci/license.zip` |
 
