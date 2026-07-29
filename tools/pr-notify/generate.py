@@ -52,7 +52,18 @@ def main() -> int:
         classified = classify_prs(prs)
         logger.info("Classified %d PRs", len(classified))
 
-        data = format_dashboard_data(classified, config.repos)
+        if config.filter_authors:
+            allowed = {a.lower() for a in config.filter_authors}
+            classified = [cpr for cpr in classified if cpr.pr.author.lower() in allowed]
+            logger.info(
+                "Filtered to %d PRs by %d team members",
+                len(classified),
+                len(allowed),
+            )
+
+        data = format_dashboard_data(
+            classified, config.repos, title=config.title or "OSAC PR Dashboard"
+        )
         data_json = json.dumps(data, indent=2)
         logger.info("Generated dashboard data (%d chars)", len(data_json))
 

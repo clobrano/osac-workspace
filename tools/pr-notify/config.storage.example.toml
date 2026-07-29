@@ -1,0 +1,36 @@
+# Storage WG PR Dashboard configuration
+# Shows only PRs authored by Storage WG members across OSAC repos.
+
+title = "Storage WG PR Dashboard"
+description = "Open PRs from Storage working group members across OSAC repos."
+
+repos = [
+    "osac-project/fulfillment-service",
+    "osac-project/osac-operator",
+    "osac-project/osac-aap",
+    "osac-project/osac-ui",
+    "osac-project/enhancement-proposals",
+    "osac-project/osac-installer",
+    "osac-project/osac-workspace",
+]
+
+filter_authors = [
+    "akshaynadkarni",
+    "avishayt",
+    "DanNiESh",
+    "ronniel1",
+    "rgolangh",
+    "wgordon17",
+    "zszabo-rh",
+]
+
+# Slack settings (used by notify.py only)
+slack_channel = "C0B6USDQ85S"
+slack_creds_dir = "~/.config/slack/"
+
+# Dashboard settings
+[dashboard]
+repo = "osac-project/osac-workspace"
+branch = "main"
+base_url = "https://osac-project.github.io/osac-workspace/storage-pr-dashboard"
+data_path = "docs/storage-pr-dashboard/data.json"

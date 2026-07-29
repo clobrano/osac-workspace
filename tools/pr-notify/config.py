@@ -50,9 +50,15 @@ def load_config(path: str) -> Config:
             data_path=d.get("data_path", "docs/pr-dashboard/data.json"),
         )
 
+    raw_authors = data.get("filter_authors")
+    filter_authors = list(raw_authors) if raw_authors else None
+
     return Config(
         repos=data["repos"],
         slack_channel=data.get("slack_channel"),
         slack_creds_dir=slack_creds_dir,
         dashboard=dashboard,
+        filter_authors=filter_authors,
+        title=data.get("title"),
+        description=data.get("description"),
     )

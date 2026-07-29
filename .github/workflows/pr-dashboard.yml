@@ -32,20 +32,40 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Generate dashboard data
+      - name: Generate all dashboards
         working-directory: tools/pr-notify
         env:
           GH_TOKEN: ${{ secrets.OSAC_BOT_PAT }}
         run: |
-          python generate.py \
-            --config config.example.toml \
-            --output ../../docs/pr-dashboard/data.json
+          for config in config*.example.toml; do
+            [ -f "$config" ] || continue
+            data_path=$(python -c "
+          import tomllib
+          c = tomllib.load(open('$config', 'rb'))
+          print(c.get('dashboard', {}).get('data_path', 'docs/pr-dashboard/data.json'))
+          ")
+            output="../../${data_path}"
+            outdir=$(dirname "$output")
+            mkdir -p "$outdir"
+            cp ../../docs/pr-dashboard/index.html "$outdir/"
+            cp ../../docs/pr-dashboard/.nojekyll "$outdir/" 2>/dev/null || true
+            echo "::group::$config -> $data_path"
+            python generate.py --config "$config" --output "$output"
+            echo "::endgroup::"
+          done
+
+      - name: Generate dashboard manifest
+        working-directory: tools/pr-notify
+        run: python generate_manifest.py --output ../../_site/dashboards.json
 
       - name: Assemble site
         run: |
           mkdir -p _site/presentations
           cp index.html _site/
-          cp -r docs/pr-dashboard _site/pr-dashboard
+          for d in docs/*-dashboard docs/*-pr-dashboard; do
+            [ -d "$d" ] || continue
+            cp -r "$d" "_site/$(basename "$d")"
+          done
           cp presentations/*.html _site/presentations/
           cp -r presentations/assets _site/presentations/ 2>/dev/null || true
 
