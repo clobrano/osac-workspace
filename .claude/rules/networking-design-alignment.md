@@ -6,6 +6,7 @@ This rule applies when working on any Jira issue that is networking-related. A t
 
 - The Jira issue has component **Connectivity&Fabric**
 - The task touches networking resources: VirtualNetwork, Subnet, SecurityGroup, ExternalIP, ExternalIPPool, ExternalIPAttachment, NATGateway, NetworkClass
+- The task touches networking objects: NICs, ports, interfaces, network attachments, bridges, VLANs, routes, or any L2/L3 plumbing
 - The task touches the renamed legacy resources: PublicIP, PublicIPPool, PublicIPAttachment
 - The task involves fabric managers (Netris, Neutron), K8s managers (OVN-Kubernetes), or network provisioning
 - The task affects how VMs, clusters, or bare-metal instances connect to networks
