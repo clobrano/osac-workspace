@@ -31,7 +31,7 @@ def main() -> int:
         slug = os.path.basename(os.path.dirname(data_path))
 
         dashboards.append({
-            "title": data.get("title", "PR Dashboard"),
+            "title": data.get("title") or "OSAC PR Dashboard",
             "description": data.get("description", ""),
             "slug": slug,
         })

@@ -51,7 +51,16 @@ def load_config(path: str) -> Config:
         )
 
     raw_authors = data.get("filter_authors")
-    filter_authors = list(raw_authors) if raw_authors else None
+    if raw_authors is None:
+        filter_authors = None
+    elif not isinstance(raw_authors, list) or not all(
+        isinstance(a, str) for a in raw_authors
+    ):
+        raise SystemExit(
+            f"Field 'filter_authors' must be an array of strings in config '{path}'"
+        )
+    else:
+        filter_authors = raw_authors
 
     return Config(
         repos=data["repos"],

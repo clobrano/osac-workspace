@@ -37,6 +37,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.OSAC_BOT_PAT }}
         run: |
+          template_dir="../../docs/pr-dashboard"
           for config in config*.example.toml; do
             [ -f "$config" ] || continue
             data_path=$(python -c "
@@ -47,8 +48,10 @@ jobs:
             output="../../${data_path}"
             outdir=$(dirname "$output")
             mkdir -p "$outdir"
-            cp ../../docs/pr-dashboard/index.html "$outdir/"
-            cp ../../docs/pr-dashboard/.nojekyll "$outdir/" 2>/dev/null || true
+            if [ "$(realpath "$outdir")" != "$(realpath "$template_dir")" ]; then
+              cp "$template_dir/index.html" "$outdir/"
+              cp "$template_dir/.nojekyll" "$outdir/" 2>/dev/null || true
+            fi
             echo "::group::$config -> $data_path"
             python generate.py --config "$config" --output "$output"
             echo "::endgroup::"
@@ -62,7 +65,7 @@ jobs:
         run: |
           mkdir -p _site/presentations
           cp index.html _site/
-          for d in docs/*-dashboard docs/*-pr-dashboard; do
+          for d in docs/*dashboard*/; do
             [ -d "$d" ] || continue
             cp -r "$d" "_site/$(basename "$d")"
           done
