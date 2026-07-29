@@ -78,6 +78,7 @@ The designs establish strict deletion ordering with phased requeue. Violating th
 
 - Read the unified design first to understand the resource model
 - Read the service-specific design (both design.md and prd.md) for the service your issue affects
-- When implementing, verify your code matches the resource names, field names, and relationships defined in the designs
+- **During planning**: verify the plan aligns with both the PRD requirements and the design decisions. Flag any deviation before proceeding.
+- **During implementation**: verify the code matches the resource names, field names, relationships, and constraints defined in the designs and PRDs. Re-check alignment after each significant change.
 - When reviewing, check that PRs don't introduce networking concepts that contradict the designs
 - If a Jira issue's requirements conflict with these designs, flag the conflict before implementing
