@@ -27,17 +27,26 @@ for script in "$SCRIPT_DIR"/*.sh; do
 done
 
 echo
-echo "== actionlint on embedded workflow_run gate template (SKILL.md) =="
+echo "== actionlint on embedded workflow_run gate template (reference.md) =="
 if command -v actionlint &>/dev/null; then
   # Plain mktemp (no fixed /tmp/<name>.XXXXXX prefix) — keeps the temp file
   # under $TMPDIR with a fully random name, matching the bash -n path above
   # that avoids predictable world-writable-tmp-dir-adjacent filenames.
   tmp_yaml="$(mktemp)"
   trap 'rm -f "$tmp_yaml"' EXIT
-  awk '/^```yaml$/{flag=1; next} /^```$/{if(flag){flag=0; exit}} flag' \
-    "$SKILL_DIR/SKILL.md" > "$tmp_yaml"
+  # Template lives under reference.md#workflow_run-gate-pattern (moved out of
+  # SKILL.md for the skillsaw context-budget). Take the first ```yaml block
+  # in that section only — stop at the next ## heading so a later fence is
+  # never mistaken for the gate template.
+  awk '
+    /^## workflow_run gate pattern$/ { in_sec=1; next }
+    in_sec && /^## / { exit }
+    in_sec && /^```yaml$/ { flag=1; next }
+    in_sec && flag && /^```$/ { exit }
+    flag { print }
+  ' "$SKILL_DIR/reference.md" > "$tmp_yaml"
   if [ ! -s "$tmp_yaml" ]; then
-    fail "no \`\`\`yaml block found in SKILL.md - extraction awk pattern may be stale"
+    fail "no \`\`\`yaml block found under reference.md#workflow_run-gate-pattern - extraction awk may be stale"
   elif actionlint "$tmp_yaml"; then
     pass "embedded template (0 errors)"
   else
@@ -54,8 +63,8 @@ echo "== semver regexes against known good/bad tags =="
 # Two distinct regexes are documented, on purpose - keep both tables in
 # sync with their source:
 #   general:       reference.md#semver-regex (allows +build metadata)
-#   image-tag-safe: SKILL.md's guard job / verification example (rejects
-#                   +build, since Docker/OCI tags can't contain '+')
+#   image-tag-safe: reference.md#workflow_run-gate-pattern guard job
+#                   (rejects +build, since Docker/OCI tags can't contain '+')
 general_re='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
 image_tag_safe_re='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?$'
 
