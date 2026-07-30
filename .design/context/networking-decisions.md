@@ -1,23 +1,9 @@
 # Networking Architecture Decisions
 
-Extracted from the merged unified networking designs. Read this file during
-planning, implementation, and review of any networking-related work.
-
-For full designs, see `enhancement-proposals/enhancements/`:
-
-| Document | Path | Scope |
-|----------|------|-------|
-| **Unified Networking Design** | `OSAC-1433-unified-networking/design.md` | Master design — resource model, NetworkClass, two-manager architecture, ExternalIP rename |
-| **Unified Networking PRD** | `OSAC-1433-unified-networking/prd.md` | Requirements, user stories, gaps analysis |
-| **Default Networking Design** | `OSAC-1433-default-networking/design.md` | Auto-provisioned networking for tenants who don't configure explicit networks |
-| **Default Networking PRD** | `OSAC-1433-default-networking/prd.md` | Default networking requirements and acceptance criteria |
-| **VMaaS Networking Design** | `OSAC-1435-vmaas-networking/design.md` | VM-specific: KubeVirt integration, OVN bridge, VM subnet attachment |
-| **VMaaS Networking PRD** | `OSAC-1435-vmaas-networking/prd.md` | VMaaS networking requirements and acceptance criteria |
-| **CaaS Networking Design** | `OSAC-1436-caas-networking/design.md` | Cluster-specific: HCP node networking, cluster-to-fabric integration |
-| **CaaS Networking PRD** | `OSAC-1436-caas-networking/prd.md` | CaaS networking requirements and acceptance criteria |
-| **BMaaS Networking Design** | `OSAC-1437-bmaas-networking/design.md` | Bare-metal-specific: BaremetalInstance, direct fabric attachment |
-| **BMaaS Networking PRD** | `OSAC-1437-bmaas-networking/prd.md` | BMaaS networking requirements and acceptance criteria |
-| **DNS API** | `dns-api/README.md` | DNS record management |
+Extracted from the merged unified networking designs.
+Read this file during planning, implementation, and review of OSAC networking-related work.
+For full designs, see `enhancement-proposals/enhancements/` — search for networking-related
+directories (OSAC-1433, OSAC-1435, OSAC-1436, OSAC-1437, dns-api).
 
 ## Key design decisions
 
