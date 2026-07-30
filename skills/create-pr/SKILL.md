@@ -130,7 +130,23 @@ This is a warning — proceeding with PR creation.
 
 **Always continue to Step 4** regardless of the result.
 
-## Step 4: Push to Fork
+## Step 4: Pre-Flight Review Gate
+
+Run the `review-gate` skill against staged changes. This is the last local
+check before anything leaves the machine — it runs after validation (Step 2)
+and the coverage advisory (Step 3), since either of those can still prompt
+more edits, and right before push (Step 5).
+
+Before invoking it, stage the changes it should review if they aren't already
+(`git add`) — `review-gate` only looks at `git diff --cached`.
+
+**If the gate reports BLOCKED:** Stop. Show the full aggregated report from
+`review-gate`. Do not push. Fix the flagged issues, re-stage, and re-run this
+step.
+
+**If the gate reports PASS:** Continue to Step 5.
+
+## Step 5: Push to Fork
 
 Always push to `fork`, never to `origin`.
 
@@ -140,7 +156,7 @@ git push -u fork "$BRANCH"
 
 If push fails due to diverged history, do not force-push automatically. Show the push error to the user and ask them for explicit instructions on how to proceed.
 
-## Step 5: Determine PR Title
+## Step 6: Determine PR Title
 
 The PR title must include the Jira ticket key if one exists.
 
@@ -160,7 +176,7 @@ If no ticket key is found, ask: "Is there a Jira ticket for this work? (e.g., OS
 
 If none, omit the prefix — just use a descriptive title.
 
-## Step 6: Create PR
+## Step 7: Create PR
 
 Determine the upstream repo from the `origin` remote:
 
@@ -200,7 +216,7 @@ EOF
 )"
 ```
 
-## Step 7: Report Result
+## Step 8: Report Result
 
 Display the PR URL as a clickable markdown link:
 
@@ -217,10 +233,11 @@ If cross-repo PRs exist, remind: "Link related PRs in the description (e.g., 'De
 | 1 | Detect context | Not on main, fork exists, commits ahead |
 | 2 | Run validation | All checks pass |
 | 3 | Check test coverage | Advisory warning (does not block) |
-| 4 | Push to fork | Push succeeds |
-| 5 | Determine title | Jira key included if available |
-| 6 | Create PR | PR created against origin/main |
-| 7 | Report | Show PR URL |
+| 4 | Pre-flight review gate | `review-gate` reports PASS (blocks on critical/important findings) |
+| 5 | Push to fork | Push succeeds |
+| 6 | Determine title | Jira key included if available |
+| 7 | Create PR | PR created against origin/main |
+| 8 | Report | Show PR URL |
 
 ## Common Issues
 
@@ -255,11 +272,13 @@ If a PR already exists, show its URL instead of creating a duplicate.
 - Push to `origin` — always use `fork`
 - Create a PR from `main`
 - Skip validation checks
+- Skip the pre-flight review gate, or push after it reports BLOCKED
 - Force-push without user confirmation
 - Create a PR with failing tests
 
 **Always:**
 - Run repo-specific validation first
+- Run the pre-flight review gate before pushing
 - Push to `fork` remote
 - Include Jira ticket key in title when available
 - Check for existing PRs before creating duplicates
