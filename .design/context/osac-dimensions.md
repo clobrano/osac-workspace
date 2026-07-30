@@ -99,6 +99,33 @@ Does the feature require new deployment prerequisites or configuration?
 *Design document specifies: Helm chart values, `osac/osac-installer`
 script changes.*
 
+#### Enclave Wizard Pipeline
+
+Any feature that adds or modifies Helm values in `osac-installer` must consider the Enclave Wizard pipeline. The Wizard renders configuration controls automatically from the Helm chart's JSON Schema — no custom UI code is needed for standard fields.
+
+**Pipeline:** `osac-installer` schema change → enclave OSAC plugin picks up the change → Enclave Wizard UI renders the control.
+
+**When it applies:** Any feature that adds installer Helm values that operators configure during deployment (e.g., DNS provider, storage backend, feature toggles).
+
+**Schema-type-to-control mapping:**
+
+| JSON Schema type | Wizard UI control | Example |
+|------------------|-------------------|---------|
+| `enum` | Dropdown | DNS provider: `route53`, `infoblox` |
+| `boolean` | Checkbox | Enable bundled PostgreSQL |
+| `string` (no enum) | Free text input | External hostname |
+| `integer` / `number` | Numeric input | Worker node count |
+
+The schema file is [`osac-installer/charts/osac/values.schema.json`](https://github.com/osac-project/osac-installer/blob/main/charts/osac/values.schema.json). Validation rules, default values, and descriptions come from the schema — the Wizard enforces them automatically.
+
+**`/design:decompose` must produce three artifacts** when the pipeline applies:
+
+1. **osac-installer story** — add the Helm value to `values.schema.json` with proper type, default, and description
+2. **Enclave plugin task** — pick up the schema change and expose the parameter (Component: `Enclave`)
+3. **Enclave UI task** — render the control in the Wizard, blocked-by the plugin task (Component: `Enclave`)
+
+**Complex additions:** If the feature requires custom UI logic beyond proxying a Helm value (e.g., multi-step wizards, conditional fields, API calls), flag the UI task as needing design discussion — the schema-driven approach won't cover it.
+
 ### E2E Testing
 
 What E2E test coverage does the feature require in osac-test-infra (bootstrapped at `osac-test-infra/`)?
@@ -128,6 +155,15 @@ What UI support does the feature require in the osac-ui web console (bootstrappe
 - Is UI in scope for this milestone or explicitly deferred (API/CLI-only acceptable)?
 - Does the feature require new UI components or extend existing ones in osac-ui?
 - Which Fulfillment API resources and catalog entries need console representation? (osac-ui uses the Fulfillment Public API via proxy — not direct CRD access)
+
+#### Enclave Wizard UI tasks
+
+Cloud Infrastructure Admin UI work goes through the Enclave Wizard pipeline
+documented in the [Installation > Enclave Wizard Pipeline](#enclave-wizard-pipeline)
+section. When a feature adds installer Helm values, `/design:decompose` must
+produce the three-artifact chain (installer schema → plugin task → UI task)
+with the UI task blocked-by the plugin task. See that section for the
+schema-type-to-control mapping and task templates.
 
 #### Jira component conventions
 
