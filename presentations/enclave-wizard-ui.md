@@ -2,6 +2,8 @@
 marp: true
 theme: redhat
 paginate: true
+title: Enclave Wizard UI
+description: Schema-driven installation wizard for Open Sovereign AI Cloud — architecture, component pipeline, and deployment workflow.
 ---
 
 <style>

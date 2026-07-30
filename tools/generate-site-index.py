@@ -1,3 +1,54 @@
+#!/usr/bin/env python3
+"""Generate index.html for the GitHub Pages site from presentation frontmatter."""
+
+import glob
+import html
+import os
+import re
+import sys
+
+
+def parse_frontmatter(path):
+    with open(path) as f:
+        text = f.read()
+    m = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
+    if not m:
+        return {}
+    fm = {}
+    for line in m.group(1).splitlines():
+        match = re.match(r"^(\w[\w-]*):\s*(.+)$", line)
+        if match:
+            fm[match.group(1)] = match.group(2).strip()
+    return fm
+
+
+def card_html(href, title, description):
+    return (
+        f'    <a class="card" href="{html.escape(href)}">\n'
+        f"      <h2>{html.escape(title)}</h2>\n"
+        f"      <p>{html.escape(description)}</p>\n"
+        f"    </a>"
+    )
+
+
+def main():
+    presentations_dir = sys.argv[1] if len(sys.argv) > 1 else "presentations"
+    output_path = sys.argv[2] if len(sys.argv) > 2 else "index.html"
+
+    cards = []
+    for md in sorted(glob.glob(os.path.join(presentations_dir, "*.md"))):
+        fm = parse_frontmatter(md)
+        if fm.get("marp") != "true":
+            continue
+        slug = os.path.splitext(os.path.basename(md))[0]
+        title = fm.get("title", slug.replace("-", " ").title())
+        description = fm.get("description", "")
+        cards.append(card_html(f"presentations/{slug}.html", title, description))
+
+    if not cards:
+        print("warning: no presentations found", file=sys.stderr)
+
+    page = f"""\
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,38 +57,38 @@
   <title>OSAC Workspace</title>
   <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;700&family=Red+Hat+Text:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    body {{
       font-family: 'Red Hat Text', sans-serif;
       background: #f2f2f2;
       color: #151515;
       min-height: 100vh;
-    }
-    header {
+    }}
+    header {{
       background: #151515;
       border-top: 4px solid #ee0000;
       padding: 32px 40px;
-    }
-    header h1 {
+    }}
+    header h1 {{
       font-family: 'Red Hat Display', sans-serif;
       color: #fff;
       font-size: 1.8em;
       font-weight: 700;
-    }
-    header p {
+    }}
+    header p {{
       color: #a0a0a0;
       margin-top: 6px;
       font-size: 0.95em;
-    }
-    .cards {
+    }}
+    .cards {{
       max-width: 900px;
       margin: 40px auto;
       padding: 0 24px;
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 20px;
-    }
-    .card {
+    }}
+    .card {{
       background: #fff;
       border-radius: 8px;
       padding: 28px 24px;
@@ -45,23 +96,23 @@
       color: inherit;
       border: 1px solid #e0e0e0;
       transition: box-shadow 0.15s, border-color 0.15s;
-    }
-    .card:hover {
+    }}
+    .card:hover {{
       border-color: #ee0000;
       box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    .card h2 {
+    }}
+    .card h2 {{
       font-family: 'Red Hat Display', sans-serif;
       font-size: 1.2em;
       margin-bottom: 8px;
       color: #ee0000;
-    }
-    .card p {
+    }}
+    .card p {{
       font-size: 0.9em;
       color: #4d4d4d;
       line-height: 1.5;
-    }
-    .section-title {
+    }}
+    .section-title {{
       max-width: 900px;
       margin: 40px auto 12px;
       padding: 0 24px;
@@ -70,7 +121,7 @@
       text-transform: uppercase;
       letter-spacing: 2px;
       color: #707070;
-    }
+    }}
   </style>
 </head>
 <body>
@@ -84,10 +135,7 @@
 
   <div class="section-title">Presentations</div>
   <div class="cards">
-    <a class="card" href="presentations/ai-assisted-sdlc.html">
-      <h2>AI-Assisted SDLC</h2>
-      <p>How OSAC uses Claude Code skills for the full development lifecycle: PRD, Design, Implementation, and E2E testing.</p>
-    </a>
+{"".join(chr(10) + c for c in cards)}
   </div>
   <script>
     fetch("dashboards.json")
@@ -122,3 +170,12 @@
   </script>
 </body>
 </html>
+"""
+
+    with open(output_path, "w") as f:
+        f.write(page)
+    print(f"wrote {output_path} with {len(cards)} presentation(s)")
+
+
+if __name__ == "__main__":
+    main()
