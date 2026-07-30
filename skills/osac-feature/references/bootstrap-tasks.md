@@ -7,10 +7,14 @@
 
 ## Gate task summary
 
-Create documentation gate tasks under the bootstrap epic. Each body uses blank lines
-between blocks (jira-cli preserves them). Non-empty lines in order:
+Create documentation gate tasks under the bootstrap epic. Each task's Jira
+summary is prefixed with its gate name and suffixed with the Feature title
+(`<gate> - ${FEATURE_SUMMARY}`) so it's identifiable in flat Jira views
+(backlog, board, "my issues") without opening the epic/Feature. Each body
+uses blank lines between blocks (jira-cli preserves them). Non-empty lines
+in order:
 
-1. AC text (matches summary)
+1. AC text (matches gate name)
 2. `/prd` or `/design` workflow hint — PRD and Design only
 3. `Feature: ${KEY}`
 
@@ -18,10 +22,10 @@ Do **not** reference `/ux-design` or `/ui-design`.
 
 | Summary | Labels | Body (non-empty lines in `$TASK_BODY`) | When |
 |---------|--------|----------------------------------------|------|
-| PRD | (none) | 1: Draft, submit, and merge the Product Requirements Document. 2: Use `/prd` workflow. 3: Feature: ${KEY} | Always |
-| Design | (none) | 1: Draft, submit, and merge the technical Design / Enhancement Proposal. 2: Use `/design` workflow. 3: Feature: ${KEY} | Always |
-| UX Design | `osac-ux` | 1: Draft, submit, and merge the UX specification. 2: Feature: ${KEY} | `REQUIRES_UI=yes` |
-| UI Design | `osac-ui` | 1: Draft, submit, and merge the UI design document. 2: Feature: ${KEY} | `REQUIRES_UI=yes` |
+| `PRD - ${FEATURE_SUMMARY}` | (none) | 1: Draft, submit, and merge the Product Requirements Document. 2: Use `/prd` workflow. 3: Feature: ${KEY} | Always |
+| `Design - ${FEATURE_SUMMARY}` | (none) | 1: Draft, submit, and merge the technical Design / Enhancement Proposal. 2: Use `/design` workflow. 3: Feature: ${KEY} | Always |
+| `UX Design - ${FEATURE_SUMMARY}` | `osac-ux` | 1: Draft, submit, and merge the UX specification. 2: Feature: ${KEY} | `REQUIRES_UI=yes` |
+| `UI Design - ${FEATURE_SUMMARY}` | `osac-ui` | 1: Draft, submit, and merge the UI design document. 2: Feature: ${KEY} | `REQUIRES_UI=yes` |
 
 Apply gate-task labels only on the task they describe — do **not** put `osac-ux`
 on UI Design or `osac-ui` on UX Design. PRD and Design have no labels
@@ -29,12 +33,19 @@ on UI Design or `osac-ui` on UX Design. PRD and Design have no labels
 
 ## Duplicate check
 
-For each gate task, duplicate-check with exact summary (substitute task name in
-JQL — summaries are literal: `PRD`, `Design`, `UX Design`, `UI Design`):
+For each gate task, duplicate-check with exact summary (substitute gate name in
+JQL — full summaries are literal: `PRD - ${FEATURE_SUMMARY}`, `Design - ${FEATURE_SUMMARY}`,
+`UX Design - ${FEATURE_SUMMARY}`, `UI Design - ${FEATURE_SUMMARY}`).
+
+Also match the **bare legacy gate name** (`PRD`, `Design`, `UX Design`, `UI Design`
+with no Feature-title suffix) in the same query — epics bootstrapped before this
+naming convention have gate tasks titled that way, and an exact-match on only the
+titled summary would miss them and create a duplicate:
 
 ```bash
-TASK_SUMMARY="PRD"   # or Design, UX Design, UI Design
-collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND summary = \"${TASK_SUMMARY}\"" \
+TASK_SUMMARY="PRD - ${FEATURE_SUMMARY}"   # or Design, UX Design, UI Design
+GATE_NAME="PRD"                            # bare gate word — same substitution
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND (summary = \"${TASK_SUMMARY}\" OR summary = \"${GATE_NAME}\")" \
   || { echo "Task duplicate-check failed for ${TASK_SUMMARY} — stopping before create" >&2; exit 1; }
 if [ "$KEY_COUNT" -gt 1 ]; then
   echo "Multiple tasks named ${TASK_SUMMARY} under epic — ask user" >&2
@@ -48,8 +59,9 @@ fi
 ```
 
 A failed lookup must stop here — do not fall through and create a task on an
-unconfirmed duplicate state. When reusing `FIRST_KEY`, skip the create command
-for that summary.
+unconfirmed duplicate state. When reusing `FIRST_KEY` (titled or legacy match),
+skip the create command for that summary — do not rename a reused legacy task;
+the one-time bulk rename covers backfilling those.
 
 ## Task creation order
 
@@ -62,8 +74,9 @@ create** when the parent is a Feature; tasks under an epic accept `-P` normally.
 ## PRD task
 
 ```bash
-TASK_SUMMARY="PRD"
-collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND summary = \"${TASK_SUMMARY}\"" \
+TASK_SUMMARY="PRD - ${FEATURE_SUMMARY}"
+GATE_NAME="PRD"
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND (summary = \"${TASK_SUMMARY}\" OR summary = \"${GATE_NAME}\")" \
   || { echo "Task duplicate-check failed for ${TASK_SUMMARY} — stopping before create" >&2; exit 1; }
 if [ "$KEY_COUNT" -gt 1 ]; then
   echo "Multiple tasks named ${TASK_SUMMARY} under epic — ask user" >&2
@@ -87,7 +100,7 @@ Use \`/prd\` workflow.
 Feature: ${KEY}
 EOF
 
-jira issue create -t Task --project OSAC -s "PRD" \
+jira issue create -t Task --project OSAC -s "${TASK_SUMMARY}" \
   --template "$TASK_BODY" \
   -P "${EPIC_KEY}" --no-input --raw >"$OUT" 2>"$ERR" </dev/null
 
@@ -101,23 +114,35 @@ fi
 fi
 ```
 
-Repeat for Design, UX Design, and UI Design (change `TASK_SUMMARY`, body, labels,
-and target variable per the table). Use the same duplicate-check + reuse/skip
-pattern before each create block. Use the same empty-key guard before exiting —
-include every completed task key in the context line.
+Repeat for Design, UX Design, and UI Design (change `TASK_SUMMARY` — always
+`<gate> - ${FEATURE_SUMMARY}` — and `GATE_NAME` to the bare gate word, plus
+body, labels, and target variable per the table). Use the same duplicate-check
++ reuse/skip pattern before each create block. Use the same empty-key guard
+before exiting — include every completed task key in the context line.
 
 ## UX Design task
 
 When `REQUIRES_UI=yes`:
 
 ```bash
+TASK_SUMMARY="UX Design - ${FEATURE_SUMMARY}"
+GATE_NAME="UX Design"
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND (summary = \"${TASK_SUMMARY}\" OR summary = \"${GATE_NAME}\")" \
+  || { echo "Task duplicate-check failed for ${TASK_SUMMARY} — stopping before create" >&2; exit 1; }
+if [ "$KEY_COUNT" -gt 1 ]; then
+  echo "Multiple tasks named ${TASK_SUMMARY} under epic — ask user" >&2
+  exit 1
+fi
+if [ "$KEY_COUNT" -eq 1 ]; then
+  TASK_UX=$FIRST_KEY
+else
 cat >"$TASK_BODY" <<EOF
 Draft, submit, and merge the UX specification.
 
 Feature: ${KEY}
 EOF
 
-jira issue create -t Task --project OSAC -s "UX Design" \
+jira issue create -t Task --project OSAC -s "${TASK_SUMMARY}" \
   --template "$TASK_BODY" \
   -P "${EPIC_KEY}" --label osac-ux --no-input --raw >"$OUT" 2>"$ERR" </dev/null
 
@@ -128,6 +153,7 @@ if ! [[ "${TASK_UX}" =~ ^OSAC-[0-9]+$ ]]; then
   jq -r '.errorMessages[]? // .errors? // empty' "$OUT" 2>/dev/null >&2
   exit 1
 fi
+fi
 ```
 
 ## UI Design task
@@ -135,13 +161,24 @@ fi
 When `REQUIRES_UI=yes`:
 
 ```bash
+TASK_SUMMARY="UI Design - ${FEATURE_SUMMARY}"
+GATE_NAME="UI Design"
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND (summary = \"${TASK_SUMMARY}\" OR summary = \"${GATE_NAME}\")" \
+  || { echo "Task duplicate-check failed for ${TASK_SUMMARY} — stopping before create" >&2; exit 1; }
+if [ "$KEY_COUNT" -gt 1 ]; then
+  echo "Multiple tasks named ${TASK_SUMMARY} under epic — ask user" >&2
+  exit 1
+fi
+if [ "$KEY_COUNT" -eq 1 ]; then
+  TASK_UI=$FIRST_KEY
+else
 cat >"$TASK_BODY" <<EOF
 Draft, submit, and merge the UI design document.
 
 Feature: ${KEY}
 EOF
 
-jira issue create -t Task --project OSAC -s "UI Design" \
+jira issue create -t Task --project OSAC -s "${TASK_SUMMARY}" \
   --template "$TASK_BODY" \
   -P "${EPIC_KEY}" --label osac-ui --no-input --raw >"$OUT" 2>"$ERR" </dev/null
 
@@ -151,6 +188,7 @@ if ! [[ "${TASK_UI}" =~ ^OSAC-[0-9]+$ ]]; then
   cat "$ERR" >&2
   jq -r '.errorMessages[]? // .errors? // empty' "$OUT" 2>/dev/null >&2
   exit 1
+fi
 fi
 ```
 
