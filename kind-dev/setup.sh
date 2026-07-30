@@ -41,8 +41,8 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+WORKSPACE_DIR="$(realpath "${SCRIPT_DIR}/..")"
 
 # Configuration
 CLUSTER_NAME="${CLUSTER_NAME:-osac-dev}"

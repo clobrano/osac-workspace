@@ -11,8 +11,8 @@
 # Run after ai-workflows install.sh all in bootstrap.sh.
 set -euo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-PROJECT_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
+SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+PROJECT_ROOT="$(realpath "${SCRIPT_DIR}/..")"
 
 OSAC_SKILLS=(
   create-pr
