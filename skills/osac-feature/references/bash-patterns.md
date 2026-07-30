@@ -235,7 +235,7 @@ require_osac_key "$KEY" "Feature" "$OUT" "$ERR"
 ## Duplicate search pattern
 
 ```bash
-collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND summary = \"PRD\"" \
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND summary = \"PRD - ${FEATURE_SUMMARY}\"" \
   || { echo "Duplicate-check lookup failed — stopping before create" >&2; exit 1; }
 # KEY_COUNT == 1 → reuse FIRST_KEY; KEY_COUNT > 1 → ask user; 0 → create
 ```

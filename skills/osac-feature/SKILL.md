@@ -148,7 +148,8 @@ Ready to create in Jira:
 
   Bootstrap epic:  <FEATURE_SUMMARY> - Bootstrap
     Label: bootstrap; fix version copied from Feature (when not backlog)
-  Bootstrap tasks: PRD, Design[, UX Design, UI Design if UI work]
+  Bootstrap tasks: PRD - <FEATURE_SUMMARY>, Design - <FEATURE_SUMMARY>
+    [, UX Design - <FEATURE_SUMMARY>, UI Design - <FEATURE_SUMMARY> if UI work]
 
   (Gate tasks do not receive fix version.)
 
@@ -238,6 +239,9 @@ See [feature-body-template.md](references/feature-body-template.md) for the Jira
 - UX Design task gets `osac-ux`; UI Design task gets `osac-ui`; PRD and Design
   have no labels; bootstrap epic gets `bootstrap` only
 - Jira hierarchy: Feature → Bootstrap epic → gate tasks (PRD, Design, [UX Design, UI Design])
+- Gate task summaries include the Feature title (`<gate> - ${FEATURE_SUMMARY}`,
+  e.g. `PRD - <FEATURE_SUMMARY>`) so they're identifiable outside the epic/Feature —
+  see [bootstrap-tasks.md](references/bootstrap-tasks.md)
 - Bootstrap epic: create without `-P`, then `jira issue edit -P` — Epic create with `-P` on a Feature parent returns HTTP 400; use `</dev/null` on all jira create/edit to avoid stdin hangs (jira-cli#948)
 - Gate tasks track documentation milestones, not implementation work
 - **Fix version:** Feature chooses at confirm gate; bootstrap epic copies when set;
