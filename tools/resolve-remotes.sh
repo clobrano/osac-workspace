@@ -6,9 +6,10 @@
 #   tools/resolve-remotes.sh --print [REPO_PATH]
 #
 # Options:
-#   --org ORG    GitHub org to detect as upstream (default: osac-project)
-#   --print      Human-readable output instead of eval-able assignments
-#   -h, --help   Show usage
+#   --org ORG           GitHub org to detect as upstream (default: osac-project)
+#   --push-remote NAME  Explicitly select the push remote (skip auto-detection)
+#   --print             Human-readable output instead of eval-able assignments
+#   -h, --help          Show usage
 #
 # Output (eval mode):
 #   UPSTREAM_REMOTE=origin
@@ -23,6 +24,7 @@ set -euo pipefail
 ORG="osac-project"
 PRINT=false
 REPO_PATH=""
+EXPLICIT_PUSH_REMOTE=""
 
 usage() {
   sed -n '2,/^[^#]/{ /^#/s/^# \?//p }' "$0"
@@ -33,6 +35,9 @@ while [[ $# -gt 0 ]]; do
     --org)
       [[ -n "${2:-}" ]] || { echo "error: --org requires a value" >&2; exit 2; }
       ORG="$2"; shift 2 ;;
+    --push-remote)
+      [[ -n "${2:-}" ]] || { echo "error: --push-remote requires a value" >&2; exit 2; }
+      EXPLICIT_PUSH_REMOTE="$2"; shift 2 ;;
     --print)  PRINT=true; shift ;;
     -h|--help) usage; exit 0 ;;
     -*)
@@ -67,7 +72,14 @@ while IFS= read -r remote; do
   fi
 done < <(git -C "$REPO_PATH" remote)
 
-if [[ ${#push_candidates[@]} -eq 1 ]]; then
+if [[ -n "$EXPLICIT_PUSH_REMOTE" ]]; then
+  if git -C "$REPO_PATH" remote get-url "$EXPLICIT_PUSH_REMOTE" >/dev/null 2>&1; then
+    PUSH_REMOTE="$EXPLICIT_PUSH_REMOTE"
+  else
+    echo "error: --push-remote '$EXPLICIT_PUSH_REMOTE' does not exist in this repository" >&2
+    exit 2
+  fi
+elif [[ ${#push_candidates[@]} -eq 1 ]]; then
   PUSH_REMOTE="${push_candidates[0]}"
 elif [[ ${#push_candidates[@]} -gt 1 ]]; then
   for c in "${push_candidates[@]}"; do
@@ -80,6 +92,7 @@ elif [[ ${#push_candidates[@]} -gt 1 ]]; then
     PUSH_REMOTE="${push_candidates[0]}"
   fi
   echo "warning: multiple push remote candidates: ${push_candidates[*]}; using '${PUSH_REMOTE}'" >&2
+  echo "  hint: use --push-remote NAME to select explicitly" >&2
 fi
 
 REPO_NAME=""

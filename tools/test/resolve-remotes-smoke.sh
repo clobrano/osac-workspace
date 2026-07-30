@@ -167,6 +167,40 @@ test_prefer_fork_remote() {
   pass "prefer 'fork' remote over other push candidates"
 }
 
+test_explicit_push_remote() {
+  local repo
+  repo=$(make_repo "explicit-push")
+  git -C "$repo" remote add origin "https://github.com/osac-project/explicit-push.git"
+  git -C "$repo" remote add colleague "git@github.com:colleague/explicit-push.git"
+  git -C "$repo" remote add myfork "git@github.com:dev/explicit-push.git"
+  local out
+  out=$("$SCRIPT" --push-remote myfork "$repo" 2>/dev/null)
+  echo "$out" | grep -q "PUSH_REMOTE=myfork" || fail "expected PUSH_REMOTE=myfork with --push-remote, got: $out"
+  pass "--push-remote selects explicit push remote"
+}
+
+test_explicit_push_remote_print() {
+  local repo
+  repo=$(make_repo "explicit-push-print")
+  git -C "$repo" remote add origin "https://github.com/osac-project/explicit-push-print.git"
+  git -C "$repo" remote add colleague "git@github.com:colleague/explicit-push-print.git"
+  git -C "$repo" remote add myfork "git@github.com:dev/explicit-push-print.git"
+  local out
+  out=$("$SCRIPT" --push-remote myfork --print "$repo" 2>/dev/null)
+  echo "$out" | grep -q "Push remote:.*myfork" || fail "expected 'Push remote: myfork' in print output, got: $out"
+  pass "--push-remote works with --print mode"
+}
+
+test_explicit_push_remote_invalid() {
+  local repo
+  repo=$(make_repo "explicit-push-invalid")
+  git -C "$repo" remote add origin "https://github.com/osac-project/explicit-push-invalid.git"
+  local rc=0
+  "$SCRIPT" --push-remote nonexistent "$repo" >/dev/null 2>&1 || rc=$?
+  [[ "$rc" -eq 2 ]] || fail "expected exit code 2 for invalid --push-remote, got $rc"
+  pass "--push-remote exits 2 for nonexistent remote"
+}
+
 test_hook_fallback_on_script_failure() {
   # Source the shared helper used by the statusline hook
   local helper="${SCRIPT_DIR}/../lib/resolve-upstream.sh"
@@ -197,6 +231,9 @@ test_eval_integration
 test_worktree
 test_directory_name_mismatch
 test_prefer_fork_remote
+test_explicit_push_remote
+test_explicit_push_remote_print
+test_explicit_push_remote_invalid
 test_hook_fallback_on_script_failure
 
 echo ""

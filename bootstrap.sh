@@ -103,10 +103,14 @@ ensure_fork_remote() {
   if git -C "$dir" remote get-url "$FORK_REMOTE_NAME" &>/dev/null; then
     # Remote name already taken (e.g., --fork-name origin on a fresh clone).
     # Rename the existing remote out of the way, then add the fork.
-    local old_url
+    local old_url target
     old_url=$(git -C "$dir" remote get-url "$FORK_REMOTE_NAME")
-    git -C "$dir" remote rename "$FORK_REMOTE_NAME" upstream
-    echo "   Renamed existing '$FORK_REMOTE_NAME' ($old_url) → 'upstream'"
+    target="upstream"
+    while git -C "$dir" remote get-url "$target" &>/dev/null; do
+      target="osac-${target}"
+    done
+    git -C "$dir" remote rename "$FORK_REMOTE_NAME" "$target"
+    echo "   Renamed existing '$FORK_REMOTE_NAME' ($old_url) → '$target'"
   fi
   git -C "$dir" remote add "$FORK_REMOTE_NAME" "$url"
   git -C "$dir" fetch "$FORK_REMOTE_NAME"

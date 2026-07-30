@@ -7,15 +7,8 @@
 # back to the old $0-relative derivation only if it's somehow unset.
 WORKSPACE_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 
-resolve_upstream() {
-  local dir="$1"
-  local script="${WORKSPACE_DIR}/tools/resolve-remotes.sh"
-  if [[ -x "$script" ]]; then
-    local out
-    out=$("$script" "$dir" 2>/dev/null) && eval "$out" && echo "$UPSTREAM_REMOTE" && return
-  fi
-  echo "origin"
-}
+# shellcheck source=../../tools/lib/resolve-upstream.sh
+source "${WORKSPACE_DIR}/tools/lib/resolve-upstream.sh"
 
 fetch_and_rebase() {
   local dir="$1" name="$2" only_on_main="${3:-false}"

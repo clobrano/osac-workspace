@@ -8,7 +8,9 @@ resolve_upstream() {
   local script="${WORKSPACE_DIR}/tools/resolve-remotes.sh"
   if [[ -x "$script" ]]; then
     local out
-    out=$("$script" "$dir" 2>/dev/null) && eval "$out" && echo "$UPSTREAM_REMOTE" && return
+    out=$("$script" "$dir" 2>/dev/null) || { echo "origin"; return; }
+    echo "$out" | sed -n 's/^UPSTREAM_REMOTE=//p'
+    return
   fi
   echo "origin"
 }
