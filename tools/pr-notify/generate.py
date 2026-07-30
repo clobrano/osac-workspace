@@ -11,6 +11,7 @@ from classifier import classify_prs
 from config import load_config
 from data_formatter import format_dashboard_data
 from github import fetch_open_prs
+from models import DEFAULT_TITLE
 
 
 def setup_logging() -> None:
@@ -73,7 +74,7 @@ def main() -> int:
             )
 
         data = format_dashboard_data(
-            classified, config.repos, title=config.title or "OSAC PR Dashboard"
+            classified, config.repos, title=config.title or DEFAULT_TITLE
         )
         data_json = json.dumps(data, indent=2)
         logger.info("Generated dashboard data (%d chars)", len(data_json))

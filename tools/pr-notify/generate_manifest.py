@@ -8,6 +8,8 @@ import os
 import sys
 import tomllib
 
+from models import DEFAULT_TITLE
+
 
 def slug_from_data_path(data_path: str) -> str:
     """Derive the dashboard URL slug from a data_path like 'docs/pr-dashboard/data.json'."""
@@ -39,7 +41,7 @@ def main() -> int:
             continue
 
         dashboards.append({
-            "title": data.get("title") or "OSAC PR Dashboard",
+            "title": data.get("title") or DEFAULT_TITLE,
             "description": data.get("description", ""),
             "slug": slug,
         })

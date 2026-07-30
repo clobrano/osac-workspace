@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from generate_manifest import slug_from_data_path
+from models import DEFAULT_TITLE
 
 
 class TestSlugFromDataPath(unittest.TestCase):
@@ -82,7 +83,7 @@ class TestManifestGeneration(unittest.TestCase):
 
             with open(output) as f:
                 data = json.load(f)
-            self.assertEqual(data[0]["title"], "OSAC PR Dashboard")
+            self.assertEqual(data[0]["title"], DEFAULT_TITLE)
 
 
 if __name__ == "__main__":

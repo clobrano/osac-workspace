@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
+DEFAULT_TITLE = "OSAC PR Dashboard"
+
 
 class PRStatus(Enum):
     NEEDS_REVIEW = "needs_review"

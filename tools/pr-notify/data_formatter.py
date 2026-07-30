@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from models import ClassifiedPR, PRStatus
+from models import ClassifiedPR, DEFAULT_TITLE, PRStatus
 
 
 _REVIEWABLE_STATUSES = frozenset(
@@ -13,7 +13,7 @@ _REVIEWABLE_STATUSES = frozenset(
 def format_dashboard_data(
     classified_prs: list[ClassifiedPR],
     repos: list[str],
-    title: str = "OSAC PR Dashboard",
+    title: str = DEFAULT_TITLE,
 ) -> dict:
     """Build a dict suitable for JSON serialization and dashboard rendering.
 
