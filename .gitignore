@@ -51,7 +51,7 @@ build/
 *.a
 
 # Generated site index (built by CI and make slides)
-index.html
+/index.html
 
 # Dependencies (language-specific -- uncomment as needed)
 # node_modules/

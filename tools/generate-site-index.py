@@ -41,8 +41,12 @@ def main():
         if fm.get("marp") != "true":
             continue
         slug = os.path.splitext(os.path.basename(md))[0]
-        title = fm.get("title", slug.replace("-", " ").title())
-        description = fm.get("description", "")
+        missing = [k for k in ("title", "description") if not fm.get(k)]
+        if missing:
+            print(f"error: {md} is missing frontmatter: {', '.join(missing)}", file=sys.stderr)
+            sys.exit(1)
+        title = fm["title"]
+        description = fm["description"]
         cards.append(card_html(f"presentations/{slug}.html", title, description))
 
     if not cards:

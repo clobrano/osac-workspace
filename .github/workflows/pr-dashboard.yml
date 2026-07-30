@@ -79,8 +79,12 @@ jobs:
           cd tools/pr-notify && python generate_manifest.py --output ../../_site/dashboards.json
           cd ../..
           cp presentations/*.html _site/presentations/
-          cp -r presentations/assets _site/presentations/ 2>/dev/null || true
-          cp -r presentations/themes _site/presentations/ 2>/dev/null || true
+          if [ -d presentations/assets ]; then
+            cp -r presentations/assets _site/presentations/
+          fi
+          if [ -d presentations/themes ]; then
+            cp -r presentations/themes _site/presentations/
+          fi
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

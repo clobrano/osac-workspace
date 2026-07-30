@@ -26,7 +26,7 @@ Create a Red Hat-branded slide deck as a [Marp](https://marp.app/) markdown file
 3. **Write the deck** as `presentations/<slug>.md` using `theme: redhat` (see Frontmatter below). Include `title` and `description` in the frontmatter — CI uses them to generate the site index.
 4. **Preview locally** with `make slides` (builds all decks + generates `index.html`). Iterate on layout.
 5. **If a PPTX / Google Slides export is requested**, follow the PPTX rules below — they change how you must author the slides.
-6. **Commit only the `.md` file** — HTML is built by CI (`GitHub Pages` workflow) and deployed to GitHub Pages automatically. Do not commit `*.html` or `*.pptx` files (they are gitignored).
+6. **Commit the `.md` file and any new assets** (`presentations/assets/`) — HTML and PPTX are built by CI (`GitHub Pages` workflow) and deployed to GitHub Pages automatically. Do not commit `*.html` or `*.pptx` files (they are gitignored).
 
 ## Frontmatter
 
