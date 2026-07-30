@@ -68,7 +68,9 @@ Reject (ask user to revise) if the summary contains:
 - Shell/JQL metacharacters: `$`, backticks, `&`, `|`
 - Newlines or control characters
 - Leading/trailing whitespace only
-- More than 255 characters (Jira summary limit)
+- More than 243 characters — Jira's 255-char summary limit minus the longest
+  gate prefix (`UX Design - ` / `UI Design - `, 12 chars), so every bootstrap
+  gate task summary (`<gate> - ${FEATURE_SUMMARY}`) stays within the limit too
 
 Summaries are embedded in exact-match JQL (`summary = "..."`) and shell `-q`
 strings; these characters break parsing or expansion. Summaries must be a
@@ -173,7 +175,7 @@ Execute in order. **Read each reference file before its step** — do not skip.
 
 | Failure | Action |
 |---------|--------|
-| Invalid summary (JQL/shell unsafe chars, >255 chars) | Reject before confirm; ask user to revise |
+| Invalid summary (JQL/shell unsafe chars, >243 chars) | Reject before confirm; ask user to revise |
 | User declines confirm gate | Stop; no Jira creates |
 | Duplicate Feature found | Stop; report existing key(s); ask user whether to reuse or proceed anyway |
 | Empty `KEY` after Feature create | Stop; report `$ERR` and error JSON; do not bootstrap |

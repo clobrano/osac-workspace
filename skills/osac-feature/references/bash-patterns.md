@@ -235,7 +235,10 @@ require_osac_key "$KEY" "Feature" "$OUT" "$ERR"
 ## Duplicate search pattern
 
 ```bash
-collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND summary = \"PRD - ${FEATURE_SUMMARY}\"" \
+# Match the titled summary AND the bare legacy gate name (pre-dating the
+# "<gate> - ${FEATURE_SUMMARY}" convention) so epics bootstrapped before the
+# rename don't get a duplicate gate task created alongside the old one.
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND (summary = \"PRD - ${FEATURE_SUMMARY}\" OR summary = \"PRD\")" \
   || { echo "Duplicate-check lookup failed — stopping before create" >&2; exit 1; }
 # KEY_COUNT == 1 → reuse FIRST_KEY; KEY_COUNT > 1 → ask user; 0 → create
 ```

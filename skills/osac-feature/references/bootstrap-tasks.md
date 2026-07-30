@@ -35,11 +35,17 @@ on UI Design or `osac-ui` on UX Design. PRD and Design have no labels
 
 For each gate task, duplicate-check with exact summary (substitute gate name in
 JQL — full summaries are literal: `PRD - ${FEATURE_SUMMARY}`, `Design - ${FEATURE_SUMMARY}`,
-`UX Design - ${FEATURE_SUMMARY}`, `UI Design - ${FEATURE_SUMMARY}`):
+`UX Design - ${FEATURE_SUMMARY}`, `UI Design - ${FEATURE_SUMMARY}`).
+
+Also match the **bare legacy gate name** (`PRD`, `Design`, `UX Design`, `UI Design`
+with no Feature-title suffix) in the same query — epics bootstrapped before this
+naming convention have gate tasks titled that way, and an exact-match on only the
+titled summary would miss them and create a duplicate:
 
 ```bash
 TASK_SUMMARY="PRD - ${FEATURE_SUMMARY}"   # or Design, UX Design, UI Design
-collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND summary = \"${TASK_SUMMARY}\"" \
+GATE_NAME="PRD"                            # bare gate word — same substitution
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND (summary = \"${TASK_SUMMARY}\" OR summary = \"${GATE_NAME}\")" \
   || { echo "Task duplicate-check failed for ${TASK_SUMMARY} — stopping before create" >&2; exit 1; }
 if [ "$KEY_COUNT" -gt 1 ]; then
   echo "Multiple tasks named ${TASK_SUMMARY} under epic — ask user" >&2
@@ -53,8 +59,9 @@ fi
 ```
 
 A failed lookup must stop here — do not fall through and create a task on an
-unconfirmed duplicate state. When reusing `FIRST_KEY`, skip the create command
-for that summary.
+unconfirmed duplicate state. When reusing `FIRST_KEY` (titled or legacy match),
+skip the create command for that summary — do not rename a reused legacy task;
+the one-time bulk rename covers backfilling those.
 
 ## Task creation order
 
@@ -68,7 +75,8 @@ create** when the parent is a Feature; tasks under an epic accept `-P` normally.
 
 ```bash
 TASK_SUMMARY="PRD - ${FEATURE_SUMMARY}"
-collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND summary = \"${TASK_SUMMARY}\"" \
+GATE_NAME="PRD"
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND (summary = \"${TASK_SUMMARY}\" OR summary = \"${GATE_NAME}\")" \
   || { echo "Task duplicate-check failed for ${TASK_SUMMARY} — stopping before create" >&2; exit 1; }
 if [ "$KEY_COUNT" -gt 1 ]; then
   echo "Multiple tasks named ${TASK_SUMMARY} under epic — ask user" >&2
@@ -107,10 +115,10 @@ fi
 ```
 
 Repeat for Design, UX Design, and UI Design (change `TASK_SUMMARY` — always
-`<gate> - ${FEATURE_SUMMARY}` — plus body, labels, and target variable per the
-table). Use the same duplicate-check + reuse/skip pattern before each create
-block. Use the same empty-key guard before exiting — include every completed
-task key in the context line.
+`<gate> - ${FEATURE_SUMMARY}` — and `GATE_NAME` to the bare gate word, plus
+body, labels, and target variable per the table). Use the same duplicate-check
++ reuse/skip pattern before each create block. Use the same empty-key guard
+before exiting — include every completed task key in the context line.
 
 ## UX Design task
 
@@ -118,6 +126,16 @@ When `REQUIRES_UI=yes`:
 
 ```bash
 TASK_SUMMARY="UX Design - ${FEATURE_SUMMARY}"
+GATE_NAME="UX Design"
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND (summary = \"${TASK_SUMMARY}\" OR summary = \"${GATE_NAME}\")" \
+  || { echo "Task duplicate-check failed for ${TASK_SUMMARY} — stopping before create" >&2; exit 1; }
+if [ "$KEY_COUNT" -gt 1 ]; then
+  echo "Multiple tasks named ${TASK_SUMMARY} under epic — ask user" >&2
+  exit 1
+fi
+if [ "$KEY_COUNT" -eq 1 ]; then
+  TASK_UX=$FIRST_KEY
+else
 cat >"$TASK_BODY" <<EOF
 Draft, submit, and merge the UX specification.
 
@@ -135,6 +153,7 @@ if ! [[ "${TASK_UX}" =~ ^OSAC-[0-9]+$ ]]; then
   jq -r '.errorMessages[]? // .errors? // empty' "$OUT" 2>/dev/null >&2
   exit 1
 fi
+fi
 ```
 
 ## UI Design task
@@ -143,6 +162,16 @@ When `REQUIRES_UI=yes`:
 
 ```bash
 TASK_SUMMARY="UI Design - ${FEATURE_SUMMARY}"
+GATE_NAME="UI Design"
+collect_keys_from_jql "parent = ${EPIC_KEY} AND type = Task AND (summary = \"${TASK_SUMMARY}\" OR summary = \"${GATE_NAME}\")" \
+  || { echo "Task duplicate-check failed for ${TASK_SUMMARY} — stopping before create" >&2; exit 1; }
+if [ "$KEY_COUNT" -gt 1 ]; then
+  echo "Multiple tasks named ${TASK_SUMMARY} under epic — ask user" >&2
+  exit 1
+fi
+if [ "$KEY_COUNT" -eq 1 ]; then
+  TASK_UI=$FIRST_KEY
+else
 cat >"$TASK_BODY" <<EOF
 Draft, submit, and merge the UI design document.
 
@@ -159,6 +188,7 @@ if ! [[ "${TASK_UI}" =~ ^OSAC-[0-9]+$ ]]; then
   cat "$ERR" >&2
   jq -r '.errorMessages[]? // .errors? // empty' "$OUT" 2>/dev/null >&2
   exit 1
+fi
 fi
 ```
 
