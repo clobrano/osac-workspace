@@ -9,6 +9,11 @@ import sys
 import tomllib
 
 
+def slug_from_data_path(data_path: str) -> str:
+    """Derive the dashboard URL slug from a data_path like 'docs/pr-dashboard/data.json'."""
+    return os.path.basename(os.path.dirname(data_path))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Generate dashboards.json manifest from config files"
@@ -28,7 +33,10 @@ def main() -> int:
 
         dashboard_section = data.get("dashboard", {})
         data_path = dashboard_section.get("data_path", "docs/pr-dashboard/data.json")
-        slug = os.path.basename(os.path.dirname(data_path))
+        slug = slug_from_data_path(data_path)
+        if not slug:
+            print(f"Skipping {path}: cannot derive slug from data_path '{data_path}'", file=sys.stderr)
+            continue
 
         dashboards.append({
             "title": data.get("title") or "OSAC PR Dashboard",

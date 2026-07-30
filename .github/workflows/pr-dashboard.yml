@@ -40,11 +40,7 @@ jobs:
           template_dir="../../docs/pr-dashboard"
           for config in config*.example.toml; do
             [ -f "$config" ] || continue
-            data_path=$(python -c "
-          import tomllib
-          c = tomllib.load(open('$config', 'rb'))
-          print(c.get('dashboard', {}).get('data_path', 'docs/pr-dashboard/data.json'))
-          ")
+            data_path=$(python generate.py --config "$config" --output /dev/null --print-data-path)
             output="../../${data_path}"
             outdir=$(dirname "$output")
             mkdir -p "$outdir"
@@ -57,10 +53,6 @@ jobs:
             echo "::endgroup::"
           done
 
-      - name: Generate dashboard manifest
-        working-directory: tools/pr-notify
-        run: python generate_manifest.py --output ../../_site/dashboards.json
-
       - name: Assemble site
         run: |
           mkdir -p _site/presentations
@@ -69,6 +61,8 @@ jobs:
             [ -d "$d" ] || continue
             cp -r "$d" "_site/$(basename "$d")"
           done
+          cd tools/pr-notify && python generate_manifest.py --output ../../_site/dashboards.json
+          cd ../..
           cp presentations/*.html _site/presentations/
           cp -r presentations/assets _site/presentations/ 2>/dev/null || true
 

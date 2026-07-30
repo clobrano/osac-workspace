@@ -37,6 +37,11 @@ def main() -> int:
         action="store_true",
         help="Print JSON to stdout instead of writing to file",
     )
+    parser.add_argument(
+        "--print-data-path",
+        action="store_true",
+        help="Print the dashboard.data_path from the config and exit",
+    )
     args = parser.parse_args()
 
     setup_logging()
@@ -44,6 +49,12 @@ def main() -> int:
 
     try:
         config = load_config(args.config)
+
+        if args.print_data_path:
+            data_path = config.dashboard.data_path if config.dashboard else "docs/pr-dashboard/data.json"
+            print(data_path)
+            return 0
+
         logger.info("Loaded config: %d repos", len(config.repos))
 
         prs = fetch_open_prs(config.repos)
