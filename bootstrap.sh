@@ -111,11 +111,13 @@ REFERENCE_REPOS=(
 CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
 if [ "$CURRENT_BRANCH" = "main" ]; then
   echo "📦 Updating osac-workspace..."
-  if git fetch origin -q 2>/dev/null && git rebase origin/main --autostash -q 2>/dev/null; then
-    echo "   ✅ osac-workspace up to date"
-  else
+  if ! git fetch origin -q; then
+    echo "   ⚠️  Fetch failed for osac-workspace. Skipping self-update."
+  elif ! git rebase origin/main --autostash -q; then
     git rebase --abort 2>/dev/null || true
-    echo "   ⚠️  osac-workspace rebase failed — continuing with current version"
+    echo "   ⚠️  Rebase failed for osac-workspace — continuing with current version"
+  else
+    echo "   ✅ osac-workspace up to date"
   fi
 else
   echo "ℹ️  osac-workspace on branch '$CURRENT_BRANCH', skipping self-update"
