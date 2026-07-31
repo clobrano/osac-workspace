@@ -110,7 +110,13 @@ coverage for both named personas — do not require a separate heading per
 persona when the PRD deliberately consolidates identical stories (see
 `enhancement-proposals/guidelines/prd_guide.md`'s "Duplicated persona
 stories" entry for the canonical rule this rubric is calibrated
-against).
+against). Verify the merge is genuine, not just labeled that way: if the
+combined story's outcome or constraints only actually hold for one of
+the named personas (e.g., a shared "view quota" heading where one
+persona sees only their own usage and the other sees the whole
+organization's), treat the persona whose real need differs as
+uncovered — a shared heading does not exempt the PRD from describing
+what each named persona can actually do.
 
 - 0 = Vague, unclear, or describes system internals rather than user outcomes. No personas or services identified, or no per-persona user stories.
 - 1 = Ambiguous — need is partially clear but mixed with implementation, missing specifics, or missing affected personas. Or: user stories exist but some affected personas lack stories.
