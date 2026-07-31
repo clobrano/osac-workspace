@@ -106,7 +106,7 @@ Check:
 
 - A=0: Design introduces new CRDs without tenant annotation, uses direct DB access instead of gRPC, proto schemas don't follow standard object shape, doesn't mention which repos need changes.
 - A=1: Design follows controller patterns and has tenant isolation, proto schemas use standard object shape but mix spec/status ownership (e.g., user-modifiable fields in status), doesn't describe interaction with osac-aap for provisioning.
-- A=2: Design follows all conventions, describes the full resource hierarchy with owner references, enumerates cross-repo changes (fulfillment-service proto + osac-operator controller + osac-aap role), and defines terminology upfront.
+- A=2: Design follows all conventions, describes the full resource hierarchy with owner references, enumerates cross-component changes within `osac` (fulfillment-service proto + osac-operator controller + osac-aap role) plus any genuine cross-repo impact (e.g., `osac-installer`), and defines terminology upfront.
 
 #### 2. Feasibility (0-2)
 
