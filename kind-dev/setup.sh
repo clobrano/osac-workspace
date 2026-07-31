@@ -532,10 +532,10 @@ install_authorino() {
 # ── Data Services ──────────────────────────────────────────────────────────────
 
 install_postgres() {
-  local chart_dir="${WORKSPACE_DIR}/fulfillment-service/it/charts/postgres"
+  local chart_dir="${WORKSPACE_DIR}/osac/fulfillment-service/it/charts/postgres"
   if [[ ! -d "$chart_dir" ]]; then
     err "PostgreSQL chart not found at ${chart_dir}"
-    err "Run bootstrap.sh to clone fulfillment-service"
+    err "Run bootstrap.sh to clone osac"
     return 1
   fi
 
@@ -619,10 +619,10 @@ EOF
 }
 
 install_keycloak() {
-  local chart_dir="${WORKSPACE_DIR}/fulfillment-service/it/charts/keycloak"
+  local chart_dir="${WORKSPACE_DIR}/osac/fulfillment-service/it/charts/keycloak"
   if [[ ! -d "$chart_dir" ]]; then
     err "Keycloak chart not found at ${chart_dir}"
-    err "Run bootstrap.sh to clone fulfillment-service"
+    err "Run bootstrap.sh to clone osac"
     return 1
   fi
 
@@ -753,7 +753,7 @@ create_controller_credentials() {
 # ── OSAC Services (umbrella chart) ─────────────────────────────────────────────
 
 install_fake_crds() {
-  local fakes_dir="${WORKSPACE_DIR}/osac-operator/config/crd/fakes"
+  local fakes_dir="${WORKSPACE_DIR}/osac/osac-operator/config/crd/fakes"
   if [[ ! -d "$fakes_dir" ]]; then
     warn "Fake CRDs not found at ${fakes_dir} — skipping"
     return 0
@@ -1057,7 +1057,10 @@ configure_awx() {
     -H "Content-Type: application/json" \
     -d '{"AWX_COLLECTIONS_ENABLED": false, "AWX_ROLES_ENABLED": false}' >/dev/null
 
-  # Create project from osac-aap repo (or get existing)
+  # Create project from the osac mono-repo (or get existing). osac-aap's playbooks
+  # now live in the osac-aap/ subdirectory of osac-project/osac — AWX's Project API
+  # has no sparse-checkout/subdirectory field (it always clones the whole repo), so
+  # each job template's "playbook" path below is prefixed with osac-aap/ instead.
   local project_response
   project_response=$(curl -s -X POST http://localhost:8052/api/v2/projects/ \
     -H "Authorization: Bearer ${awx_token}" \
@@ -1066,7 +1069,7 @@ configure_awx() {
       "name": "osac-aap",
       "organization": 1,
       "scm_type": "git",
-      "scm_url": "https://github.com/osac-project/osac-aap.git",
+      "scm_url": "https://github.com/osac-project/osac.git",
       "scm_branch": "main",
       "scm_update_on_launch": false
     }')
@@ -1101,8 +1104,8 @@ tenant_storage_classes:
     tier: default"
 
   local compute_templates=(
-    "osac-create-compute-instance:playbook_osac_create_compute_instance.yml"
-    "osac-delete-compute-instance:playbook_osac_delete_compute_instance.yml"
+    "osac-create-compute-instance:osac-aap/playbook_osac_create_compute_instance.yml"
+    "osac-delete-compute-instance:osac-aap/playbook_osac_delete_compute_instance.yml"
   )
 
   for entry in "${compute_templates[@]}"; do
@@ -1125,12 +1128,12 @@ tenant_storage_classes:
   # Create networking job templates (use real playbooks — they are effective no-ops
   # on kind because there is no matching implementation strategy / fabric manager)
   local network_templates=(
-    "osac-create-virtual-network:playbook_osac_create_virtual_network.yml"
-    "osac-delete-virtual-network:playbook_osac_delete_virtual_network.yml"
-    "osac-create-subnet:playbook_osac_create_subnet.yml"
-    "osac-delete-subnet:playbook_osac_delete_subnet.yml"
-    "osac-create-security-group:playbook_osac_create_security_group.yml"
-    "osac-delete-security-group:playbook_osac_delete_security_group.yml"
+    "osac-create-virtual-network:osac-aap/playbook_osac_create_virtual_network.yml"
+    "osac-delete-virtual-network:osac-aap/playbook_osac_delete_virtual_network.yml"
+    "osac-create-subnet:osac-aap/playbook_osac_create_subnet.yml"
+    "osac-delete-subnet:osac-aap/playbook_osac_delete_subnet.yml"
+    "osac-create-security-group:osac-aap/playbook_osac_create_security_group.yml"
+    "osac-delete-security-group:osac-aap/playbook_osac_delete_security_group.yml"
   )
 
   for entry in "${network_templates[@]}"; do
@@ -1450,7 +1453,7 @@ print_summary() {
   echo "  Keycloak Admin:   https://keycloak.${OSAC_NAMESPACE}.localhost:${EXTERNAL_INGRESS_PORT}/admin  (admin/password)"
   echo ""
   info "CLI quickstart:"
-  echo "  cd fulfillment-service && go build -o osac ./cmd/osac"
+  echo "  cd osac/fulfillment-service && go build -o osac ./cmd/osac"
   echo "  TOKEN=\$(kubectl -n ${OSAC_NAMESPACE} create token admin --duration=1h)"
   echo "  ./osac login https://api.${OSAC_NAMESPACE}.localhost:${EXTERNAL_INGRESS_PORT} --token \"\$TOKEN\" --insecure"
   echo "  ./osac get tenants"
