@@ -48,9 +48,10 @@ Use `--no-fork` if you only need read-only access or are running in CI. To overr
 
 | Repository | Description |
 |------------|-------------|
-| [fulfillment-service](https://github.com/osac-project/fulfillment-service) | gRPC/REST API server with PostgreSQL backend — manages VirtualNetworks, Subnets, SecurityGroups, ComputeInstances |
-| [osac-operator](https://github.com/osac-project/osac-operator) | Kubernetes operator for deploying OpenShift clusters via Hosted Control Planes |
-| [osac-aap](https://github.com/osac-project/osac-aap) | Ansible Automation Platform roles and playbooks for VM and network provisioning |
+| [osac](https://github.com/osac-project/osac) | Mono-repo: fulfillment-service + osac-operator + osac-aap (see subdirectories below) |
+| `osac/fulfillment-service` | gRPC/REST API server with PostgreSQL backend — manages VirtualNetworks, Subnets, SecurityGroups, ComputeInstances |
+| `osac/osac-operator` | Kubernetes operator for deploying OpenShift clusters via Hosted Control Planes |
+| `osac/osac-aap` | Ansible Automation Platform roles and playbooks for VM and network provisioning |
 | [osac-installer](https://github.com/osac-project/osac-installer) | Installation manifests, prerequisites, and demo scripts |
 | [osac-test-infra](https://github.com/osac-project/osac-test-infra) | Integration testing infrastructure |
 | [osac-ui](https://github.com/osac-project/osac-ui) | OSAC UI web console for managing cloud resources |
@@ -165,7 +166,7 @@ git worktree remove ../osac-workspace-storage-qos
 
 ```bash
 # Build and test fulfillment-service
-cd fulfillment-service
+cd osac/fulfillment-service
 go build
 ginkgo run -r
 
