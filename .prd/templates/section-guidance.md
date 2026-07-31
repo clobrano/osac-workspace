@@ -70,9 +70,7 @@ These apply across all sections:
   when the capability is truly identical — if personas experience the
   capability differently (different constraints, different visibility
   scope), keep separate stories. See `prd_guide.md`'s "Duplicated persona
-  stories" entry (Common Mistakes) for the canonical rule statement, and
-  `enhancement-proposals/enhancements/OSAC-1332-caas-cluster-storage/prd.md`
-  for the precedent.
+  stories" entry (Common Mistakes) for the canonical rule statement.
 - **Illustrative-example allowance.** A single minimal example (a sample
   request/response shape, a short flow list, a format a user types) may
   accompany prose when it is the clearest way to convey a user-observable
