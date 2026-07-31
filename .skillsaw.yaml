@@ -386,6 +386,9 @@ exclude:
   - "**/_shared/**"
   # Bootstrap component clones (present locally after bootstrap.sh)
   - "osac/**"
+  # Quarantined old standalone clones of components merged into osac (see
+  # bootstrap.sh's MERGED_COMPONENTS/quarantine_merged_component and .gitignore)
+  - ".legacy-repos/**"
   - "osac-docs/**"
   - "osac-installer/**"
   - "osac-test-infra/**"

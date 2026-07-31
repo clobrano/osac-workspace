@@ -120,6 +120,9 @@ REFERENCE_REPOS=(
 # top-level clones (if present) are no longer bootstrap-managed — quarantined
 # to .legacy-repos/<name>/ via `mv` below (never deleted; all local git
 # state, including uncommitted changes and unpushed commits, stays intact).
+# Keep in sync with skills/create-pr/SKILL.md's merged-component detection
+# (Step 1's TOUCHED_COMPONENTS regex and Step 3's File Classification table)
+# if a future component merges into osac or one of these is later split out.
 MERGED_COMPONENTS=(
   "fulfillment-service"
   "osac-operator"
