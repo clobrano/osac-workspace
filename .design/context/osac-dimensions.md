@@ -45,8 +45,8 @@ in user stories and workflow descriptions.
 
 ## Cross-Cutting Dimensions
 
-For each dimension below, the PRD should state what's in scope vs. explicitly
-out of scope.
+For each dimension below that applies (per the triage rule above), the PRD
+should state what's in scope vs. explicitly out of scope.
 
 **PRD vs Design:** The PRD states which user-facing behaviors are affected
 and why. The design document specifies how (CRD fields, conditions, reconcile

@@ -225,6 +225,13 @@ than folded silently into the score:
   consolidation rule for the cross-persona case). Recommend merging into
   one story.
 
+Report at most 3 instances per bullet above. If more exist, name the
+clearest 1-2 examples with their location and summarize the rest in one
+sentence (e.g., "and 4 more near-duplicate stories across User
+Stories") rather than listing every occurrence — this list should stay
+proportionate to the PRD's actual scope, the same standard it holds the
+PRD to.
+
 #### 5. Testability — Verifiable requirements? (0-2)
 
 Can the requirements be verified by a PM or QA engineer using the product?
@@ -290,7 +297,7 @@ offending text and show what a user-focused rewrite would look like.}
 ## Severity Classification
 
 - **Critical**: Any zero-scored criterion. Also: missing required sections, no personas identified, PRD reads like a design document.
-- **Important**: Score of 1 on any criterion. Also: vague non-goals, weak acceptance criteria, scope creep signals, requirements stated as generic capabilities without explicit use cases, content outside the PRD template's sections, unsourced numeric thresholds/SLAs, near-duplicate user stories within the same persona (see Right-Sized's "Flag regardless of score").
+- **Important**: Score of 1 on any criterion. Also: vague non-goals, weakly testable user stories or requirements, scope creep signals, requirements stated as generic capabilities without explicit use cases, content outside the PRD template's sections, unsourced numeric thresholds/SLAs, near-duplicate user stories within the same persona (see Right-Sized's "Flag regardless of score").
 - **Suggestion**: Style improvements, additional non-goals, deeper risk analysis, more specific metrics.
 
 ## Notes

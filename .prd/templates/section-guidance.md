@@ -5,7 +5,7 @@ template (`enhancement-proposals/guidelines/prd_template.md`). This file
 is read during the `/draft` phase. It is not included in the final output.
 
 This is a project-level override of the upstream `ai-workflows` section
-guidance. OSAC's PRD template has 5 sections — Problem Statement, In
+guidance. OSAC's PRD template has 6 sections — Problem Statement, In
 Scope, Out of Scope, User Stories, Assumptions, Dependencies — not the
 upstream 8-section template (Goals and Non-Goals, Requirements with
 FR-N/NFR-N, Acceptance Criteria, Risks, Open Questions). Only the
