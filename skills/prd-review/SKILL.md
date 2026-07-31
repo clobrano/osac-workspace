@@ -167,7 +167,7 @@ finalizer behavior, or playbook parameters IS design leakage.
 - 1 = Mostly user-focused but some design details leak through — names an internal component or describes a behavior only observable by reading code
 - 2 = Describes only user-observable outcomes; implementation details are absent or limited to platform vocabulary
 
-See [calibration-examples.md § 3](references/calibration-examples.md#3-user-facing-focus--free-from-design-leakage) for UF=0/1/2 worked examples, including the illustrative-example-vs-internal-state pair.
+See [calibration-examples.md § 3](references/calibration-examples.md#3-user-facing-focus--free-from-design-leakage) for UF=0/1/2 worked examples, including the illustrative-example-vs-internal-state pair (see `enhancement-proposals/guidelines/prd_guide.md`'s "A narrow exception: illustrative examples" entry for the canonical rule this pair is calibrated against).
 
 **Smell tests:**
 - "Could a PM verify this by using the product?" — if no, it's design leakage
@@ -261,7 +261,7 @@ Present findings as a structured review:
 | WHAT (clear need) | X/2 | {explain what need is described and how clearly; note persona/dimension coverage} |
 | WHY (justification) | X/2 | {cite the specific evidence found or note its absence} |
 | User-Facing Focus | X/2 | {note any design leakage or lack thereof} |
-| Right-Sized | X/2 | {assess scope — independent capabilities?} |
+| Right-Sized | X/2 | {assess scope — independent capabilities? economical treatment of scope?} |
 | Testability | X/2 | {which requirements are verifiable by using the product?} |
 | **Total** | **X/10** | **PASS / FAIL** |
 

@@ -1,9 +1,10 @@
 # OSAC Feature Dimensions
 
-This file defines the cross-cutting dimensions that every OSAC PRD and design
-document must address. Both the PRD (`/prd`) and design (`/design`) workflows
-should consult this file during their ingest phases to ensure comprehensive
-coverage.
+This file defines the cross-cutting dimensions that OSAC PRD and design
+documents should consider, subject to the relevance triage below — not every
+dimension applies to every feature. Both the PRD (`/prd`) and design
+(`/design`) workflows should consult this file during their ingest phases to
+ensure comprehensive coverage of the dimensions that actually apply.
 
 ## Applying These Dimensions
 

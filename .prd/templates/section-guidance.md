@@ -81,9 +81,10 @@ These apply across all sections:
   This is not license to describe internal architecture, controller or
   reconciler logic, or name CRD fields/conditions — the PRD vs Design
   litmus test in `prd_guide.md` still governs what the example may
-  contain. For example, showing the port-mapping format a tenant types
-  (`8080:80`) is a user-facing illustrative example; showing a
-  reconciler's internal condition payload is not.
+  contain. See `prd_guide.md`'s "A narrow exception: illustrative
+  examples" entry for the canonical rule statement and worked example
+  (the port-mapping format a tenant types, `8080:80`, versus a
+  reconciler's internal condition payload).
 - **Source dimensions, don't transcribe them.**
   `.design/context/osac-dimensions.md` and `review-patterns.md` help
   identify what content a feature needs (which personas, which
