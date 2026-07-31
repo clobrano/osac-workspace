@@ -24,7 +24,7 @@ change land as one branch/one PR instead of three:
 
 ```bash
 cd osac
-git worktree add ../osac-feature-branch feature-branch
+git worktree add -b feature-branch ../osac-feature-branch
 cd ../osac-feature-branch
 # Work here, then clean up:
 git worktree remove ../osac-feature-branch

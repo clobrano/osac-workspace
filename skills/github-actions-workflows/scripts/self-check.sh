@@ -135,14 +135,25 @@ elif command -v gh &>/dev/null && gh auth status &>/dev/null; then
   # exits non-zero, so a `2>/dev/null || true` + "is stdout non-empty?"
   # check would misread that error body as a successful [.type, .sha]
   # result and feed garbage into the parse below.
+  #
+  # Capture combined output (not 2>/dev/null) on the failure path too, for
+  # the same reason as pos_out/neg_out below: a real regression (auth/perms)
+  # and the expected "no tag yet" 404 look identical from the exit code
+  # alone, so the skip message needs the diagnostic text to tell them apart.
   GUARDED_SHA=""
-  if ref_json="$(gh api "repos/${REPO}/git/ref/tags/${TAG}" --jq '[.object.type, .object.sha] | @tsv' 2>/dev/null)"; then
+  TAG_DIAG=""
+  if ref_json="$(gh api "repos/${REPO}/git/ref/tags/${TAG}" --jq '[.object.type, .object.sha] | @tsv' 2>&1)"; then
     read -r ref_type ref_sha <<< "$ref_json"
     if [ "$ref_type" = "tag" ]; then
-      GUARDED_SHA="$(gh api "repos/${REPO}/git/tags/${ref_sha}" --jq .object.sha 2>/dev/null)" || GUARDED_SHA=""
+      if ! GUARDED_SHA="$(gh api "repos/${REPO}/git/tags/${ref_sha}" --jq .object.sha 2>&1)"; then
+        TAG_DIAG="$GUARDED_SHA"
+        GUARDED_SHA=""
+      fi
     else
       GUARDED_SHA="$ref_sha"
     fi
+  else
+    TAG_DIAG="$ref_json"
   fi
   if [ -n "$GUARDED_SHA" ]; then
     # Capture combined output (not &>/dev/null) so a failure message can
@@ -161,7 +172,7 @@ elif command -v gh &>/dev/null && gh auth status &>/dev/null; then
       pass "negative case (deliberately wrong SHA) exits non-zero"
     fi
   else
-    echo "  skip: couldn't resolve $REPO@$TAG via gh api (network/auth?)"
+    echo "  skip: couldn't resolve $REPO@$TAG via gh api (network/auth?)${TAG_DIAG:+ - $TAG_DIAG}"
   fi
 else
   echo "  skip: gh CLI not installed or not authenticated"

@@ -386,6 +386,12 @@ exclude:
   - "**/_shared/**"
   # Bootstrap component clones (present locally after bootstrap.sh)
   - "osac/**"
+  # Temporary: mirrors the same-named .gitignore entries — keep excluding the
+  # pre-mono-repo standalone clone paths until quarantine has fully soaked.
+  # Remove once the old repos are archived upstream.
+  - "fulfillment-service/**"
+  - "osac-operator/**"
+  - "osac-aap/**"
   # Quarantined old standalone clones of components merged into osac (see
   # bootstrap.sh's MERGED_COMPONENTS/quarantine_merged_component and .gitignore)
   - ".legacy-repos/**"

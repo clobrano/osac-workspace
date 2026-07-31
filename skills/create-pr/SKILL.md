@@ -46,11 +46,15 @@ touches instead of assuming a single component:
 # bootstrap.sh's MERGED_COMPONENTS array and Step 3's File Classification
 # table below if a future component merges into osac or one of these splits out.
 if [[ "$REPO_NAME" == "osac" ]]; then
-  # `|| true` on the grep: no merged-component subdirectory touched is a valid,
-  # empty-string-producing outcome, not a failure — matters under `set -e`/`pipefail`.
-  TOUCHED_COMPONENTS=$(git diff main..HEAD --name-only \
-    | grep -oE '^(fulfillment-service|osac-operator|osac-aap)/' \
-    | tr -d '/' | sort -u || true)
+  # Split the diff and the filter into two steps: a `git diff` failure must
+  # still propagate under `set -e`/`pipefail`, but "no merged-component
+  # subdirectory touched" is a valid, empty-string-producing outcome — awk
+  # exits 0 on zero matching lines, so no trailing `|| true` is needed (which
+  # would otherwise mask a genuine `git diff` failure too).
+  CHANGED_PATHS=$(git diff main..HEAD --name-only)
+  TOUCHED_COMPONENTS=$(printf '%s\n' "$CHANGED_PATHS" \
+    | awk -F/ '$1 ~ /^(fulfillment-service|osac-operator|osac-aap)$/ { print $1 }' \
+    | sort -u)
 else
   TOUCHED_COMPONENTS="$REPO_NAME"
 fi
@@ -77,6 +81,7 @@ gofmt -s -w . && git diff --exit-code
 buf generate && git diff --exit-code
 go build ./...
 ginkgo run -r internal
+uv run dev.py lint
 ```
 
 ### osac-operator
@@ -94,7 +99,8 @@ make manifests generate && git diff --exit-code
 
 ```bash
 cd "$REPO_DIR/osac-aap"
-ansible-lint
+make test
+uv run ansible-lint
 ```
 
 ### osac-installer
@@ -148,6 +154,7 @@ For each production file in the diff, check if a corresponding test file also ap
 
 - **Go:** `foo.go` → `foo_test.go` in the same directory
 - **Ansible:** `roles/<role>/tasks/*.yml` → `molecule/<role>/` or `tests/` directory has changes
+- **Python:** `osac-aap/plugins/**/*.py` → `osac-aap/tests/` or `osac-aap/test_*.py` has changes
 
 **If gaps exist**, print a warning and continue:
 

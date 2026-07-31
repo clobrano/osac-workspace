@@ -1077,11 +1077,26 @@ configure_awx() {
   # Extract project ID (handle both new creation and existing project)
   project_id=$(echo "$project_response" | python3 -c "import json,sys; data=json.load(sys.stdin); print(data.get('id', ''))" 2>/dev/null)
 
-  # If creation failed (project exists), get it by name
+  # If creation failed (project exists), get it by name. A project surviving
+  # from a pre-mono-repo run of this script still has the old standalone
+  # osac-aap scm_url, so patch it to the current one and trigger a resync —
+  # otherwise the reused project keeps cloning the wrong (now-merged) repo.
   if [[ -z "$project_id" ]]; then
     project_id=$(curl -s -H "Authorization: Bearer ${awx_token}" \
       "http://localhost:8052/api/v2/projects/?name=osac-aap" | \
       python3 -c "import json,sys; data=json.load(sys.stdin); print(data['results'][0]['id'] if data.get('results') else '')")
+
+    if [[ -n "$project_id" ]]; then
+      curl -s -X PATCH "http://localhost:8052/api/v2/projects/${project_id}/" \
+        -H "Authorization: Bearer ${awx_token}" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "scm_url": "https://github.com/osac-project/osac.git",
+          "scm_branch": "main"
+        }' >/dev/null
+      curl -s -X POST "http://localhost:8052/api/v2/projects/${project_id}/update/" \
+        -H "Authorization: Bearer ${awx_token}" >/dev/null
+    fi
   fi
 
   # Wait for project sync
