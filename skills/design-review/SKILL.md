@@ -88,7 +88,7 @@ Are the technical decisions sound and consistent with OSAC patterns?
 
 Check:
 - [ ] Owner reference (`osac.openshift.io/owner-reference`) and tenant isolation (`osac.openshift.io/tenant`) annotations present on all new resources
-- [ ] API conventions per `fulfillment-service/docs/API.md`: standard object shape (`id`, `Metadata`, `<Type>Spec`, `<Type>Status`), spec/status ownership, declarative intent-based design (no imperative methods), naming conventions
+- [ ] API conventions per `osac/fulfillment-service/docs/API.md`: standard object shape (`id`, `Metadata`, `<Type>Spec`, `<Type>Status`), spec/status ownership, declarative intent-based design (no imperative methods), naming conventions
 - [ ] Spec contains only desired state (user-controlled); status contains only observed state (system-controlled)
 - [ ] Controller patterns: finalizer → status update → provisioning lifecycle
 - [ ] Conditions used for lifecycle state (preferred over phase enums for new resources)

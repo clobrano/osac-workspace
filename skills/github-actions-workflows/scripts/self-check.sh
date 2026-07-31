@@ -114,7 +114,15 @@ elif command -v gh &>/dev/null && gh auth status &>/dev/null; then
   # SELF_CHECK_TAG to point at something else, or SELF_CHECK_SKIP_LIVE=1
   # to skip this network-dependent block entirely (e.g. in an offline or
   # sandboxed environment).
-  REPO="${SELF_CHECK_REPO:-osac-project/osac-operator}"
+  #
+  # osac-operator was merged into the osac-project/osac mono-repo
+  # (OSAC-1739); the mono-repo hasn't cut its first tag yet as of this
+  # writing, so this block will report "skip: couldn't resolve..." below
+  # until it does. That's the designed-for degraded path, not a bug -
+  # set SELF_CHECK_REPO/SELF_CHECK_TAG to a still-tagged repo (e.g. the
+  # old osac-project/osac-operator, while it remains un-archived) to get
+  # live coverage back in the meantime.
+  REPO="${SELF_CHECK_REPO:-osac-project/osac}"
   TAG="${SELF_CHECK_TAG:-v0.0.1}"
   # Resolve the expected commit SHA the same way verify-tag-matches-sha.sh
   # does (peel annotated tags) rather than reading .object.sha directly -
@@ -122,12 +130,16 @@ elif command -v gh &>/dev/null && gh auth status &>/dev/null; then
   # annotated tag it would be the *tag object's* SHA instead, silently
   # testing against the wrong value. Deliberately not calling out to the
   # script under test for this setup step, to keep the test independent.
-  ref_json="$(gh api "repos/${REPO}/git/ref/tags/${TAG}" --jq '[.object.type, .object.sha] | @tsv' 2>/dev/null || true)"
+  # Check the exit status, not just output emptiness - on a 404 (or any
+  # non-2xx), `gh api` still writes the raw JSON error body to stdout and
+  # exits non-zero, so a `2>/dev/null || true` + "is stdout non-empty?"
+  # check would misread that error body as a successful [.type, .sha]
+  # result and feed garbage into the parse below.
   GUARDED_SHA=""
-  if [ -n "$ref_json" ]; then
+  if ref_json="$(gh api "repos/${REPO}/git/ref/tags/${TAG}" --jq '[.object.type, .object.sha] | @tsv' 2>/dev/null)"; then
     read -r ref_type ref_sha <<< "$ref_json"
     if [ "$ref_type" = "tag" ]; then
-      GUARDED_SHA="$(gh api "repos/${REPO}/git/tags/${ref_sha}" --jq .object.sha 2>/dev/null || true)"
+      GUARDED_SHA="$(gh api "repos/${REPO}/git/tags/${ref_sha}" --jq .object.sha 2>/dev/null)" || GUARDED_SHA=""
     else
       GUARDED_SHA="$ref_sha"
     fi
