@@ -5,6 +5,16 @@ document must address. Both the PRD (`/prd`) and design (`/design`) workflows
 should consult this file during their ingest phases to ensure comprehensive
 coverage.
 
+## Applying These Dimensions
+
+Before asking about a dimension during `/clarify`, or before drafting In
+Scope/Out of Scope content for it, confirm the feature's Jira issue plausibly
+touches that dimension (service, component, or workflow named in the issue).
+If a dimension clearly doesn't apply, skip it silently — do not ask about it,
+and do not add an "N/A" or "out of scope" line for it. When genuinely unsure
+whether a dimension applies, ask one targeted question rather than assuming
+either way.
+
 ## Services
 
 Every feature applies to one or more OSAC services. The PRD must declare
