@@ -107,7 +107,10 @@ Personas may share a single heading and story when the capability is
 genuinely identical for both (e.g., `### Tenant Admin / Tenant User`
 with "As a Tenant Admin or Tenant User, I want..."). This satisfies
 coverage for both named personas — do not require a separate heading per
-persona when the PRD deliberately consolidates identical stories.
+persona when the PRD deliberately consolidates identical stories (see
+`enhancement-proposals/guidelines/prd_guide.md`'s "Duplicated persona
+stories" entry for the canonical rule this rubric is calibrated
+against).
 
 - 0 = Vague, unclear, or describes system internals rather than user outcomes. No personas or services identified, or no per-persona user stories.
 - 1 = Ambiguous — need is partially clear but mixed with implementation, missing specifics, or missing affected personas. Or: user stories exist but some affected personas lack stories.

@@ -69,7 +69,8 @@ These apply across all sections:
   be available on my CaaS cluster when it is ready...". Only combine
   when the capability is truly identical — if personas experience the
   capability differently (different constraints, different visibility
-  scope), keep separate stories. See
+  scope), keep separate stories. See `prd_guide.md`'s "Duplicated persona
+  stories" entry (Common Mistakes) for the canonical rule statement, and
   `enhancement-proposals/enhancements/OSAC-1332-caas-cluster-storage/prd.md`
   for the precedent.
 - **Illustrative-example allowance.** A single minimal example (a sample
