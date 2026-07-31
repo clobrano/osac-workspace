@@ -62,7 +62,8 @@ osac/
 # quarantine has fully soaked (see bootstrap.sh's quarantine_merged_component()).
 # A workspace that hasn't re-run bootstrap.sh yet still has these directories
 # on disk; without these entries they'd show up as untracked and unprotected
-# by Skillsaw. Remove once the old repos are archived upstream.
+# by Skillsaw. Remove once the old repos are archived upstream (tracked by
+# OSAC-1737).
 fulfillment-service/
 osac-operator/
 osac-aap/

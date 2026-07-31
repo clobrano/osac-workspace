@@ -62,9 +62,15 @@ fi
 
 `$TOUCHED_COMPONENTS` may list zero, one, or multiple names. Use it in Steps 2
 and 3 to select which per-component block(s) apply — run every matching block,
-not just the first. If it's empty (e.g. a change only touches the mono-repo's
-own root `README.md`, outside all three subdirectories), skip the
-component-specific parts of Steps 2 and 3.
+not just the first. If it's empty because the change is purely doc/config
+outside all three subdirectories (e.g. `osac/README.md`), skip the
+component-specific parts of Steps 2 and 3. If it's empty but the change
+touches root-level files that affect multiple components' builds (e.g.
+`osac/go.work`, a root `Makefile`, `.github/workflows/`), don't skip
+validation entirely — read `osac`'s own `AGENTS.md`/`CLAUDE.md` for the
+correct root-level check (a broken `go.work` can break both
+`fulfillment-service` and `osac-operator` builds without either
+component's own validation block catching it).
 
 ## Step 2: Run Validation
 
