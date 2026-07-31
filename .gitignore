@@ -57,9 +57,7 @@ __pycache__/
 *.pyc
 
 # Bootstrap-managed repositories (cloned by bootstrap.sh)
-fulfillment-service/
-osac-operator/
-osac-aap/
+osac/
 osac-csi-driver/
 osac-docs/
 osac-installer/
@@ -71,6 +69,10 @@ host-management-openstack/
 
 # Bootstrap-managed reference repos (cloned read-only, no fork remote)
 osac-ux/
+
+# Quarantined clones of components merged into osac-project/osac — see
+# bootstrap.sh's quarantine_merged_component()
+.legacy-repos/
 
 docs/*
 !docs/pr-dashboard/
