@@ -19,7 +19,9 @@ These apply across all sections:
   to communicate clearly and no more. If a section can be said in three
   sentences, do not use ten. Long PRDs don't get read — there are no
   awards for a long PRD.
-- Write in third person, present tense.
+- Write prose in third person, present tense. The User Stories formula
+  ("As a {persona}, I want...") is a stated exception — write it in first
+  person as specified in the User Stories section below.
 - Be specific. Vague requirements produce vague implementations.
 - Every claim should be traceable to the source requirements or
   clarification answers. Use standardized source markers for
@@ -110,9 +112,11 @@ These apply across all sections:
 - Quantify impact if the source material supports it (e.g., "affects N
   tenants," "adds M minutes per deployment").
 - Explain the cost of inaction — what happens if this work is not done.
-- Keep to 3-5 sentences. If it takes more, the problem isn't well enough
-  understood yet — that's a signal to ask more clarifying questions, not
-  to write more prose.
+- Typically 3-5 sentences when the source material supports that length —
+  this is a ceiling, not a floor. If the problem is genuinely clear in
+  fewer sentences, stop there; if it takes more than 5, the problem isn't
+  well enough understood yet — that's a signal to ask more clarifying
+  questions, not to write more prose.
 
 ## In Scope
 

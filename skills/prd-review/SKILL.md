@@ -297,8 +297,8 @@ offending text and show what a user-focused rewrite would look like.}
 ## Severity Classification
 
 - **Critical**: Any zero-scored criterion. Also: missing required sections, no personas identified, PRD reads like a design document.
-- **Important**: Score of 1 on any criterion. Also: vague non-goals, weakly testable user stories or requirements, scope creep signals, requirements stated as generic capabilities without explicit use cases, content outside the PRD template's sections, unsourced numeric thresholds/SLAs, near-duplicate user stories within the same persona (see Right-Sized's "Flag regardless of score").
-- **Suggestion**: Style improvements, additional non-goals, deeper risk analysis, more specific metrics.
+- **Important**: Score of 1 on any criterion. Also: vague Out of Scope boundaries, weakly testable user stories or requirements, scope creep signals, requirements stated as generic capabilities without explicit use cases, content outside the PRD template's sections, unsourced numeric thresholds/SLAs, near-duplicate user stories within the same persona (see Right-Sized's "Flag regardless of score").
+- **Suggestion**: Style improvements, additional Out of Scope detail, deeper risk analysis, more specific metrics.
 
 ## Notes
 
