@@ -1,6 +1,6 @@
 ---
 name: create-pr
-description: Create a PR on an OSAC component repo using the fork-based workflow. Runs repo-specific validation (build, test, lint), pushes to the developer's fork remote, and opens a PR against origin/main with proper title format. Use when the user says 'create PR', 'open PR', 'submit for review', 'push and create PR', or when finishing a feature branch.
+description: Create a PR on an OSAC component repo (including the osac mono-repo, which may need per-component validation for multiple touched components in one pass) using the fork-based workflow. Runs repo-specific validation (build, test, lint), pushes to the developer's fork remote, and opens a PR against origin/main with proper title format. Use when the user says 'create PR', 'open PR', 'submit for review', 'push and create PR', or when finishing a feature branch.
 ---
 
 # Create Pull Request
@@ -34,13 +34,42 @@ BRANCH=$(git branch --show-current)
 | Has commits ahead of main | `git log main..HEAD --oneline` | Stop: "No commits ahead of main. Nothing to submit." |
 | Clean working tree | `git status --porcelain` | Stop: "Uncommitted changes detected. Commit or stash before proceeding." |
 
+### Mono-repo component detection
+
+`osac` is a mono-repo containing `fulfillment-service`, `osac-operator`, and
+`osac-aap` as subdirectories — a single PR can touch more than one of them.
+When `$REPO_NAME` is `osac`, detect which subdirectories this branch actually
+touches instead of assuming a single component:
+
+```bash
+if [[ "$REPO_NAME" == "osac" ]]; then
+  # `|| true` on the grep: no merged-component subdirectory touched is a valid,
+  # empty-string-producing outcome, not a failure — matters under `set -e`/`pipefail`.
+  TOUCHED_COMPONENTS=$(git diff main..HEAD --name-only \
+    | grep -oE '^(fulfillment-service|osac-operator|osac-aap)/' \
+    | tr -d '/' | sort -u || true)
+else
+  TOUCHED_COMPONENTS="$REPO_NAME"
+fi
+```
+
+`$TOUCHED_COMPONENTS` may list zero, one, or multiple names. Use it in Steps 2
+and 3 to select which per-component block(s) apply — run every matching block,
+not just the first. If it's empty (e.g. a change only touches the mono-repo's
+own root `README.md`, outside all three subdirectories), skip the
+component-specific parts of Steps 2 and 3.
+
 ## Step 2: Run Validation
 
-Run the repo-specific checks **before** pushing. Read the component's CLAUDE.md if unsure which commands apply.
+Run the checks for every component in `$TOUCHED_COMPONENTS` **before** pushing
+— if it lists more than one, run **every** matching block below in the same
+pass; that's the point of one PR covering multiple mono-repo components. Read
+the component's CLAUDE.md if unsure which commands apply.
 
 ### fulfillment-service
 
 ```bash
+cd "$REPO_DIR/fulfillment-service"
 gofmt -s -w . && git diff --exit-code
 buf generate && git diff --exit-code
 go build ./...
@@ -50,6 +79,7 @@ ginkgo run -r internal
 ### osac-operator
 
 ```bash
+cd "$REPO_DIR/osac-operator"
 make fmt && git diff --exit-code
 make lint
 make build
@@ -60,6 +90,7 @@ make manifests generate && git diff --exit-code
 ### osac-aap
 
 ```bash
+cd "$REPO_DIR/osac-aap"
 ansible-lint
 ```
 
@@ -97,15 +128,17 @@ Run:
 git diff main..HEAD --name-only --diff-filter=AMR
 ```
 
-Classify each changed file using the repo-specific rules below:
+Classify each changed file using the component-specific rules below — for
+`osac`, only apply the row(s) matching `$TOUCHED_COMPONENTS` (path patterns
+below already carry the mono-repo subdirectory prefix):
 
 ### File Classification
 
-| Repo | Production files | Test files | Excluded (skip) |
+| Component | Production files | Test files | Excluded (skip) |
 |------|-----------------|------------|-----------------|
-| **fulfillment-service** | `*.go` not `_test.go` | `*_test.go` | `internal/api/`, `*.pb.go`, `migrations/` |
-| **osac-operator** | `*.go` not `_test.go` | `*_test.go` | `api/v1alpha1/zz_generated*`, `config/` |
-| **osac-aap** | `roles/*/tasks/*.yml`, `plugins/**/*.py` | `molecule/*/`, `tests/`, `test_*.py` | `meta/`, `docs/` |
+| **fulfillment-service** | `fulfillment-service/**/*.go` not `_test.go` | `fulfillment-service/**/*_test.go` | `fulfillment-service/internal/api/`, `fulfillment-service/**/*.pb.go`, `fulfillment-service/**/migrations/` |
+| **osac-operator** | `osac-operator/**/*.go` not `_test.go` | `osac-operator/**/*_test.go` | `osac-operator/api/v1alpha1/zz_generated*`, `osac-operator/config/` |
+| **osac-aap** | `osac-aap/roles/*/tasks/*.yml`, `osac-aap/plugins/**/*.py` | `osac-aap/molecule/*/`, `osac-aap/tests/`, `osac-aap/test_*.py` | `osac-aap/meta/`, `osac-aap/docs/` |
 | **osac-installer** | Skip this check entirely | — | — |
 
 For each production file in the diff, check if a corresponding test file also appears in the diff. Matching rules:
@@ -120,7 +153,7 @@ For each production file in the diff, check if a corresponding test file also ap
 
 | Production file changed | Expected test file |
 |------------------------|--------------------|
-| internal/servers/foo_server.go | internal/servers/foo_server_test.go |
+| fulfillment-service/internal/servers/foo_server.go | fulfillment-service/internal/servers/foo_server_test.go |
 
 These files were added or modified without corresponding test changes.
 This is a warning — proceeding with PR creation.
@@ -161,6 +194,10 @@ If no ticket key is found, ask: "Is there a Jira ticket for this work? (e.g., OS
 If none, omit the prefix — just use a descriptive title.
 
 ## Step 6: Create PR
+
+`fulfillment-service`, `osac-operator`, and `osac-aap` share one `origin`/`fork`
+pair — the `osac` mono-repo — so this step creates a single PR covering every
+component touched in `$TOUCHED_COMPONENTS`, not one PR per component.
 
 Determine the upstream repo from the `origin` remote:
 
@@ -208,7 +245,9 @@ Display the PR URL as a clickable markdown link:
 PR created: [#<number>](<url>)
 ```
 
-If cross-repo PRs exist, remind: "Link related PRs in the description (e.g., 'Depends on fulfillment-service#123')."
+If PRs in genuinely separate repos exist (e.g. `osac` + `osac-installer` — not
+just multiple components within `osac`, which is one PR), remind: "Link
+related PRs in the description (e.g., 'Depends on osac-project/osac#123')."
 
 ## Quick Reference
 
