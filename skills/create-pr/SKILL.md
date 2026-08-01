@@ -127,12 +127,15 @@ for f in values/*/values.yaml; do
 done
 ```
 
-Mirrors the `helm-lint-installer` job in `osac`'s `.github/workflows/helm-lint.yaml`:
-`charts/osac/`'s values schema requires `service.externalHostname`/`internalHostname`,
-which every real values file leaves blank for runtime injection, so linting/templating
-the umbrella chart needs the same placeholder `--set` overrides CI uses — a bare
-`helm lint charts/osac/` (e.g. via `make helm-lint`) fails on schema validation
-regardless of what the PR actually changes.
+Reproduces the environment-values templating step of the `helm-lint-installer` job in
+`osac`'s `.github/workflows/helm-lint.yaml` — not full CI parity (that job also runs
+`ct lint --all --config ct.yaml`, templates `charts/osac/ci/*-values.yaml`, and validates
+`values.schema.json` is well-formed JSON; see the workflow for those). `charts/osac/`'s
+values schema requires `service.externalHostname`/`internalHostname`, which every real
+values file leaves blank for runtime injection, so linting/templating the umbrella chart
+needs the same placeholder `--set` overrides CI uses — a bare `helm lint charts/osac/`
+(e.g. via `make helm-lint`) fails on schema validation regardless of what the PR actually
+changes.
 
 If the change touches `values/*/values.yaml` image tags directly, also run:
 

@@ -96,8 +96,8 @@ Does the feature require new deployment prerequisites or configuration?
 - Does the feature add new configuration options for operators or admins?
 - Are there CI pipeline changes needed?
 
-*Design document specifies: Helm chart values, kustomize overlays,
-osac-installer script changes.*
+*Design document specifies: Helm chart values, `osac/osac-installer`
+script changes.*
 
 ### E2E Testing
 

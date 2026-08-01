@@ -72,6 +72,8 @@ This workspace has no build step of its own. Each component repo documents build
 | `osac-test-infra/`                      | —            | —                        | `make lint`           |
 | `osac-ui/`                              | `pnpm build` | `pnpm test`              | `pnpm lint`            |
 
+`osac/osac-installer/`'s `make helm-lint` fails unconditionally as shipped — `charts/osac/`'s values schema requires non-empty `service.externalHostname`/`internalHostname`, which every real values file leaves blank for runtime injection. See `skills/create-pr/SKILL.md`'s `osac-installer` validation block for the `--set` overrides needed to actually run it.
+
 ### Quick Reference
 
 ```bash
@@ -111,7 +113,7 @@ Link PRs in descriptions: "Depends on osac-project/osac#123".
 
 ## Deployment Coordination
 
-`osac-installer/scripts/sync-image-tags.sh` computes each component's
+`osac/osac-installer/scripts/sync-image-tags.sh` computes each component's
 current SHA-based image tag and writes it into the Helm values files.
 Because `fulfillment-service`, `osac-operator`, `osac-aap`, and
 `bare-metal-fulfillment-operator` now live in the same mono-repo as
@@ -123,7 +125,7 @@ explicit update:
 
 - **New CRD types** in `osac-operator` → register in the `fulfillment-service` reconciler (an in-repo change, same PR)
 - **`osac-ui`** → a real external dependency (OCI chart + image, version-tagged), bumped deliberately when a new release is needed
-- **`osac-csi-driver`** → the one remaining genuine git submodule, under `osac-installer/base/`; bump it with a normal `git submodule update --remote`, then run `make sync-charts` in `osac/osac-installer` to rebuild chart dependencies
+- **`osac-csi-driver`** → the one remaining genuine git submodule, under `osac/osac-installer/base/`; bump it with a normal `git submodule update --remote`, then run `make sync-charts` in `osac/osac-installer` to rebuild chart dependencies
 
 See `reference/CONVENTIONS.md` for the full dependency table (regenerated via the repo-intel tooling, not hand-edited).
 
@@ -249,16 +251,16 @@ Put `CRITICAL` / `IMPORTANT` rules in the first 20% of `SKILL.md` (skillsaw `con
 ## Architecture
 
 ```text
-osac/                          Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator
-  fulfillment-service          gRPC/REST API server, PostgreSQL, resource lifecycle
-  osac-operator                Kubernetes operator, provisions via AAP + Hosted Control Planes
-  osac-aap                     Ansible playbooks for infrastructure provisioning
-  osac-installer               Helm charts, deploys all components to OpenShift
+osac/                              Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator
+  fulfillment-service              gRPC/REST API server, PostgreSQL, resource lifecycle
+  osac-operator                    Kubernetes operator, provisions via AAP + Hosted Control Planes
+  osac-aap                         Ansible playbooks for infrastructure provisioning
+  osac-installer                   Helm charts, deploys all components to OpenShift
   bare-metal-fulfillment-operator  Kubernetes operator for bare metal fulfillment
-osac-test-infra                E2E test playbooks against fulfillment-service gRPC API
-osac-ui                        Web console (React, PatternFly 6, pnpm workspace)
-enhancement-proposals          Design documents and RFCs
-osac-docs                      Architecture docs and guides
+osac-test-infra                    E2E test playbooks against fulfillment-service gRPC API
+osac-ui                            Web console (React, PatternFly 6, pnpm workspace)
+enhancement-proposals              Design documents and RFCs
+osac-docs                          Architecture docs and guides
 ```
 
 ### Resource Hierarchy
