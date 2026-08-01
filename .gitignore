@@ -58,6 +58,12 @@ __pycache__/
 
 # Bootstrap-managed repositories (cloned by bootstrap.sh)
 osac/
+osac-csi-driver/
+osac-docs/
+osac-test-infra/
+osac-ui/
+enhancement-proposals/
+host-management-openstack/
 # Temporary: keep ignoring the pre-mono-repo standalone clone paths until
 # quarantine has fully soaked (see bootstrap.sh's quarantine_merged_component()).
 # A workspace that hasn't re-run bootstrap.sh yet still has these directories
@@ -67,14 +73,8 @@ osac/
 fulfillment-service/
 osac-operator/
 osac-aap/
-osac-csi-driver/
-osac-docs/
 osac-installer/
-osac-test-infra/
-osac-ui/
-enhancement-proposals/
 bare-metal-fulfillment-operator/
-host-management-openstack/
 
 # Bootstrap-managed reference repos (cloned read-only, no fork remote)
 osac-ux/

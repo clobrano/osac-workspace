@@ -805,12 +805,12 @@ CRDEOF
 }
 
 deploy_osac() {
-  local installer_dir="${WORKSPACE_DIR}/osac-installer"
+  local installer_dir="${WORKSPACE_DIR}/osac/osac-installer"
   local chart_dir="${installer_dir}/charts/osac"
 
   if [[ ! -d "$chart_dir" ]]; then
     err "Umbrella chart not found at ${chart_dir}"
-    err "Make sure osac-installer is checked out (run bootstrap.sh)"
+    err "Make sure osac is checked out (run bootstrap.sh)"
     return 1
   fi
 

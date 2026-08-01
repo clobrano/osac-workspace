@@ -41,35 +41,38 @@ Re-run `./bootstrap.sh` anytime to update all repos to latest `main`.
 
 Meta-workspace — run `./bootstrap.sh` to clone/update all component repos to latest `main`. **In component repos, read `CLAUDE.md` first** (progressive disclosure). Use that component's `AGENTS.md` where the table below shows **Yes** for tool-agnostic build/test conventions.
 
-Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-service`, which was then merged with `osac-operator` and `osac-aap` into the `osac` mono-repo below.
+Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-service`, which was then merged with `osac-operator`, `osac-aap`, `osac-installer`, and `bare-metal-fulfillment-operator` into the `osac` mono-repo below.
 
 | Component | Description | AGENTS.md |
 |-----------|-------------|-----------|
-| [`osac`](https://github.com/osac-project/osac) | Mono-repo: `fulfillment-service` + `osac-operator` + `osac-aap` (see subdirectories below) | — |
+| [`osac`](https://github.com/osac-project/osac) | Mono-repo: `fulfillment-service` + `osac-operator` + `osac-aap` + `osac-installer` + `bare-metal-fulfillment-operator` (see subdirectories below) | — |
 | `osac/fulfillment-service` | gRPC server + REST gateway, PostgreSQL, integrated API definitions | Yes |
 | `osac/osac-operator` | Kubernetes operator for OpenShift clusters via Hosted Control Planes | Yes |
 | `osac/osac-aap` | Ansible Automation Platform roles for infrastructure provisioning | Yes |
-| [`osac-installer`](https://github.com/osac-project/osac-installer) | Helm charts, Kustomize overlays, and installation prerequisites | Yes |
+| `osac/osac-installer` | Helm charts and installation prerequisites | Yes |
+| `osac/bare-metal-fulfillment-operator` | Kubernetes operator for bare metal fulfillment | Yes |
 | [`osac-test-infra`](https://github.com/osac-project/osac-test-infra) | Integration testing infrastructure | — |
 | [`osac-ui`](https://github.com/osac-project/osac-ui) | OSAC UI web console | Yes |
 | [`osac-ux`](https://github.com/osac-project/osac-ux) | React 19 + PatternFly 6 UI console — read-only UI reference | Yes (`osac-ux/AGENTS.md`) |
 | [`enhancement-proposals`](https://github.com/osac-project/enhancement-proposals) | Design documents and RFCs | — |
 | [`docs`](https://github.com/osac-project/docs) | Architecture docs and guides (see `docs/architecture/`) | — |
 | [`host-management-openstack`](https://github.com/osac-project/host-management-openstack) | Bare metal host management via OpenStack | — |
-| [`bare-metal-fulfillment-operator`](https://github.com/osac-project/bare-metal-fulfillment-operator) | Kubernetes operator for bare metal fulfillment | Yes |
 
 ## Build and Test
 
 This workspace has no build step of its own. Each component repo documents build and test commands in its `AGENTS.md` or `CLAUDE.md`.
 
-| Component                   | Build                              | Unit Tests               | Lint                     |
-|-----------------------------|-----------------------------------|--------------------------|--------------------------|
-| `osac/fulfillment-service/` | `go build`                        | `ginkgo run -r internal` | `uv run dev.py lint`     |
-| `osac/osac-operator/`       | `make build`                      | `make test`              | `make lint`              |
-| `osac/osac-aap/`            | —                                 | `make test`              | `uv run ansible-lint`    |
-| `osac-installer/`           | `kustomize build overlays/<name>` | —                        | `helm lint charts/osac/` |
-| `osac-test-infra/`          | —                                 | —                        | `make lint`              |
-| `osac-ui/`                  | `pnpm build`                      | `pnpm test`              | `pnpm lint`              |
+| Component                               | Build        | Unit Tests               | Lint                  |
+|------------------------------------------|--------------|--------------------------|-----------------------|
+| `osac/fulfillment-service/`             | `go build`   | `ginkgo run -r internal` | `uv run dev.py lint`  |
+| `osac/osac-operator/`                   | `make build` | `make test`              | `make lint`           |
+| `osac/osac-aap/`                        | —            | `make test`              | `uv run ansible-lint` |
+| `osac/osac-installer/`                  | —            | —                        | `make helm-lint`      |
+| `osac/bare-metal-fulfillment-operator/` | `make build` | `make test`              | `make lint`           |
+| `osac-test-infra/`                      | —            | —                        | `make lint`           |
+| `osac-ui/`                              | `pnpm build` | `pnpm test`              | `pnpm lint`            |
+
+`osac/osac-installer/`'s `make helm-lint` fails unconditionally as shipped — `charts/osac/`'s values schema requires non-empty `service.externalHostname`/`internalHostname`, which every real values file leaves blank for runtime injection. See `skills/create-pr/SKILL.md`'s `osac-installer` validation block for the `--set` overrides needed to actually run it.
 
 ### Quick Reference
 
@@ -101,24 +104,30 @@ make deploy IMG=<registry>/osac-operator:tag
 
 ### Cross-Component Changes
 
-`fulfillment-service`, `osac-operator`, and `osac-aap` live in one mono-repo
-(`osac/`) — a feature spanning them (proto definitions, CRD types, Ansible
-roles/playbooks) lands in a single branch and PR there. `osac-installer`
-remains a separate repo: when a change also needs `osac-installer` updates
-(submodule refs, CI overlays), merge the `osac` PR first, then update
-`osac-installer` to match.
+`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`, and
+`bare-metal-fulfillment-operator` all live in one mono-repo (`osac/`) — a
+feature spanning any of them (proto definitions, CRD types, Ansible
+roles/playbooks, Helm values) lands in a single branch and PR there.
 
 Link PRs in descriptions: "Depends on osac-project/osac#123".
 
 ## Deployment Coordination
 
-`osac-installer/scripts/setup.sh` pins component versions (AAP collections, fulfillment-service images) via submodule refs. When making changes that cross component boundaries, always update `osac-installer` to match:
+`osac/osac-installer/scripts/sync-image-tags.sh` computes each component's
+current SHA-based image tag and writes it into the Helm values files.
+Because `fulfillment-service`, `osac-operator`, `osac-aap`, and
+`bare-metal-fulfillment-operator` now live in the same mono-repo as
+`osac-installer` itself, they all publish SHA-tagged images off one shared
+commit — a change to any of them no longer needs a separate cross-repo
+image-tag bump; run `sync-image-tags.sh` (or `--fix` to auto-correct) in
+the same PR if it touches those values files directly. What still needs an
+explicit update:
 
-- **Proto field additions** in `fulfillment-service` → update CI overlays in `osac-installer` to use the new image version
-- **New AAP roles or collections** in `osac-aap` → bump the submodule ref in `osac-installer`
-- **New CRD types** in `osac-operator` → register in the fulfillment-service reconciler
+- **New CRD types** in `osac-operator` → register in the `fulfillment-service` reconciler (an in-repo change, same PR)
+- **`osac-ui`** → a real external dependency (OCI chart + image, version-tagged), bumped deliberately when a new release is needed
+- **`osac-csi-driver`** → the one remaining genuine git submodule, under `osac/osac-installer/base/`; bump it with a normal `git submodule update --remote`, then run `make sync-charts` in `osac/osac-installer` to rebuild chart dependencies
 
-Failing to update `osac-installer` after cross-component changes causes CI failures and deployment mismatches. See `reference/CONVENTIONS.md` for the full cross-repo dependency table.
+See `reference/CONVENTIONS.md` for the full dependency table (regenerated via the repo-intel tooling, not hand-edited).
 
 ## Enhancement Proposals
 
@@ -242,15 +251,16 @@ Put `CRITICAL` / `IMPORTANT` rules in the first 20% of `SKILL.md` (skillsaw `con
 ## Architecture
 
 ```text
-osac/                  Mono-repo: fulfillment-service + osac-operator + osac-aap
-  fulfillment-service  gRPC/REST API server, PostgreSQL, resource lifecycle
-  osac-operator        Kubernetes operator, provisions via AAP + Hosted Control Planes
-  osac-aap             Ansible playbooks for infrastructure provisioning
-osac-installer         Helm charts + Kustomize overlays, deploys all components to OpenShift
-osac-test-infra        E2E test playbooks against fulfillment-service gRPC API
-osac-ui                Web console (React, PatternFly 6, pnpm workspace)
-enhancement-proposals  Design documents and RFCs
-osac-docs              Architecture docs and guides
+osac/                              Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator
+  fulfillment-service              gRPC/REST API server, PostgreSQL, resource lifecycle
+  osac-operator                    Kubernetes operator, provisions via AAP + Hosted Control Planes
+  osac-aap                         Ansible playbooks for infrastructure provisioning
+  osac-installer                   Helm charts, deploys all components to OpenShift
+  bare-metal-fulfillment-operator  Kubernetes operator for bare metal fulfillment
+osac-test-infra                    E2E test playbooks against fulfillment-service gRPC API
+osac-ui                            Web console (React, PatternFly 6, pnpm workspace)
+enhancement-proposals              Design documents and RFCs
+osac-docs                          Architecture docs and guides
 ```
 
 ### Resource Hierarchy
