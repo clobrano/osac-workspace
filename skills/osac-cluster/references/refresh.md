@@ -8,13 +8,17 @@ The snapshot contains a frozen version of OSAC. To apply the latest component im
 
 ## Prerequisites
 
-You need the osac-installer repo cloned, submodules initialized, and up to date:
+`osac-installer` lives inside the `osac` mono-repo (`osac/osac-installer/`), not
+as its own standalone repo. You need the `osac` repo cloned, submodules
+initialized, and up to date — `<path-to-osac-installer>` in the commands
+below refers to the `osac-installer/` subdirectory of that clone:
 
 ```bash
-git clone https://github.com/osac-project/osac-installer.git
-cd osac-installer
+git clone https://github.com/osac-project/osac.git
+cd osac
 git submodule update --init --recursive
 git fetch origin main && git rebase origin/main
+cd osac-installer
 ```
 
 The refresh script also requires:
@@ -84,7 +88,7 @@ env \
 To test a PR's component image on a snapshot cluster, edit the values file before running refresh:
 
 ```bash
-cd osac-installer
+cd <path-to-osac-installer>
 
 # Override the operator image to a PR build
 sed -i 's|ghcr.io/osac-project/osac-operator:sha-.*|ghcr.io/osac-project/osac-operator:sha-YOURSHA|' values/vmaas-ci/values.yaml

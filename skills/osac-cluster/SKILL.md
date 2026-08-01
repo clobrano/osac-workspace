@@ -423,10 +423,10 @@ ssh root@<server> "free -g"             # Enough RAM?
 
 ### Refresh fails with "helm upgrade" error
 
-Make sure osac-installer is up to date with origin/main:
+Make sure `osac` (which contains `osac-installer/`) is up to date with origin/main:
 
 ```bash
-cd <osac-installer>
+cd <path-to-osac-installer>
 git fetch origin main
 git rebase origin/main
 git submodule update --init --recursive
