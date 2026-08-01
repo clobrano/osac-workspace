@@ -125,7 +125,7 @@ explicit update:
 - **`osac-ui`** → a real external dependency (OCI chart + image, version-tagged), bumped deliberately when a new release is needed
 - **`osac-csi-driver`** → the one remaining genuine git submodule, under `osac-installer/base/`; bump it with a normal `git submodule update --remote`, then run `make sync-charts` in `osac/osac-installer` to rebuild chart dependencies
 
-See `reference/CONVENTIONS.md` for the full dependency table (regenerated via the codebase-intel tooling, not hand-edited).
+See `reference/CONVENTIONS.md` for the full dependency table (regenerated via the repo-intel tooling, not hand-edited).
 
 ## Enhancement Proposals
 
