@@ -48,17 +48,17 @@ Use `--no-fork` if you only need read-only access or are running in CI. To overr
 
 | Repository | Description |
 |------------|-------------|
-| [osac](https://github.com/osac-project/osac) | Mono-repo: fulfillment-service + osac-operator + osac-aap (see subdirectories below) |
+| [osac](https://github.com/osac-project/osac) | Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator (see subdirectories below) |
 | `osac/fulfillment-service` | gRPC/REST API server with PostgreSQL backend — manages VirtualNetworks, Subnets, SecurityGroups, ComputeInstances |
 | `osac/osac-operator` | Kubernetes operator for deploying OpenShift clusters via Hosted Control Planes |
 | `osac/osac-aap` | Ansible Automation Platform roles and playbooks for VM and network provisioning |
-| [osac-installer](https://github.com/osac-project/osac-installer) | Installation manifests, prerequisites, and demo scripts |
+| `osac/osac-installer` | Installation manifests, prerequisites, and demo scripts |
+| `osac/bare-metal-fulfillment-operator` | Kubernetes operator for bare metal fulfillment |
 | [osac-test-infra](https://github.com/osac-project/osac-test-infra) | Integration testing infrastructure |
 | [osac-ui](https://github.com/osac-project/osac-ui) | OSAC UI web console for managing cloud resources |
 | [enhancement-proposals](https://github.com/osac-project/enhancement-proposals) | Design documents and enhancement proposals |
 | [docs](https://github.com/osac-project/docs)[^1] | Architecture documentation, diagrams, and design guides |
 | [host-management-openstack](https://github.com/osac-project/host-management-openstack) | Bare metal host management via OpenStack |
-| [bare-metal-fulfillment-operator](https://github.com/osac-project/bare-metal-fulfillment-operator) | Kubernetes operator for bare metal fulfillment |
 
 [^1]: Cloned into a subdirectory as `osac-docs`
 
