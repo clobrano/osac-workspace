@@ -98,9 +98,7 @@ ensure_fork_remote() {
 }
 
 REPOS=(
-  "fulfillment-service"
-  "osac-operator"
-  "osac-aap"
+  "osac"
   "osac-installer"
   "osac-test-infra"
   "osac-ui"
@@ -117,6 +115,20 @@ REPOS=(
 REFERENCE_REPOS=(
   "osac-ux"
 )
+
+# Components merged into osac-project/osac as of OSAC-1739. Old standalone
+# top-level clones (if present) are no longer bootstrap-managed — quarantined
+# to .legacy-repos/<name>/ via `mv` below (never deleted; all local git
+# state, including uncommitted changes and unpushed commits, stays intact).
+# Keep in sync with skills/create-pr/SKILL.md's merged-component detection
+# (Step 1's TOUCHED_COMPONENTS regex and Step 3's File Classification table)
+# if a future component merges into osac or one of these is later split out.
+MERGED_COMPONENTS=(
+  "fulfillment-service"
+  "osac-operator"
+  "osac-aap"
+)
+LEGACY_REPOS_DIR=".legacy-repos"
 
 # Self-update: pull latest osac-workspace before updating components
 CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
@@ -142,6 +154,46 @@ is_expected_clone() {
   local origin_url
   origin_url=$(git -C "$dir" remote get-url origin 2>/dev/null) || return 1
   [[ "${origin_url%.git}" == *"$expected_suffix" ]]
+}
+
+# Moves (never deletes) a stale standalone clone of a now-merged component
+# out from under its old top-level name. Only acts when the directory is
+# confirmed to be a clone of the old osac-project/<name> repo (precise check,
+# not a fuzzy name match) — anything else is left untouched. No-op if the
+# directory doesn't exist (already migrated or never cloned) or has already
+# been quarantined.
+quarantine_merged_component() {
+  local name="$1"
+  [ -d "$name" ] || return 0
+  is_expected_clone "$name" "$name" || return 0
+
+  local dest="${LEGACY_REPOS_DIR}/${name}"
+  if [ -e "$dest" ]; then
+    echo "⚠️  ${dest} already exists — leaving $name/ in place. Resolve manually (compare and remove one of them)."
+    UPDATE_WARNINGS=1
+    return 0
+  fi
+
+  # mkdir and mv are both part of the `if` condition (not bare statements) so
+  # a failure here — e.g. a read-only parent directory — degrades to the
+  # warning below instead of tripping `set -e` and aborting the whole script.
+  if mkdir -p "$LEGACY_REPOS_DIR" && mv "$name" "$dest"; then
+    cat <<EOF
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦➡️  $name/ is now part of osac-project/osac — moved to $dest/
+   Nothing was deleted: uncommitted changes, stashes, and unpushed
+   commits inside $dest/ are untouched. Use osac/$name/ going forward.
+   Once you've confirmed you don't need it, remove it with:
+     rm -rf $dest
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EOF
+  else
+    echo "⚠️  Could not move $name/ to $dest/ — see error above."
+    echo "   It's superseded by osac/$name/; move or remove it manually when convenient."
+    UPDATE_WARNINGS=1
+  fi
 }
 
 for entry in "${REPOS[@]}"; do
@@ -175,6 +227,10 @@ for entry in "${REPOS[@]}"; do
       ensure_fork_remote "$repo" "$dir" || confirm_continue "Fork remote for $repo failed."
     fi
   fi
+done
+
+for name in "${MERGED_COMPONENTS[@]}"; do
+  quarantine_merged_component "$name"
 done
 
 for entry in "${REFERENCE_REPOS[@]}"; do

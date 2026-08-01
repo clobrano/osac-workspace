@@ -1,6 +1,6 @@
 ---
 name: create-pr
-description: Create a PR on an OSAC component repo using the fork-based workflow. Runs repo-specific validation (build, test, lint), pushes to the developer's fork remote, and opens a PR against origin/main with proper title format. Use when the user says 'create PR', 'open PR', 'submit for review', 'push and create PR', or when finishing a feature branch.
+description: Create a PR on an OSAC component repo (including the osac mono-repo, which may need per-component validation for multiple touched components in one pass) using the fork-based workflow. Runs repo-specific validation (build, test, lint), pushes to the developer's fork remote, and opens a PR against origin/main with proper title format. Use when the user says 'create PR', 'open PR', 'submit for review', 'push and create PR', or when finishing a feature branch.
 ---
 
 # Create Pull Request
@@ -34,22 +34,66 @@ BRANCH=$(git branch --show-current)
 | Has commits ahead of main | `git log main..HEAD --oneline` | Stop: "No commits ahead of main. Nothing to submit." |
 | Clean working tree | `git status --porcelain` | Stop: "Uncommitted changes detected. Commit or stash before proceeding." |
 
+### Mono-repo component detection
+
+`osac` is a mono-repo containing `fulfillment-service`, `osac-operator`, and
+`osac-aap` as subdirectories — a single PR can touch more than one of them.
+When `$REPO_NAME` is `osac`, detect which subdirectories this branch actually
+touches instead of assuming a single component:
+
+```bash
+# Keep the (fulfillment-service|osac-operator|osac-aap) list in sync with
+# bootstrap.sh's MERGED_COMPONENTS array and Step 3's File Classification
+# table below if a future component merges into osac or one of these splits out.
+if [[ "$REPO_NAME" == "osac" ]]; then
+  # Split the diff and the filter into two steps: a `git diff` failure must
+  # still propagate under `set -e`/`pipefail`, but "no merged-component
+  # subdirectory touched" is a valid, empty-string-producing outcome — awk
+  # exits 0 on zero matching lines, so no trailing `|| true` is needed (which
+  # would otherwise mask a genuine `git diff` failure too).
+  CHANGED_PATHS=$(git diff main..HEAD --name-only)
+  TOUCHED_COMPONENTS=$(printf '%s\n' "$CHANGED_PATHS" \
+    | awk -F/ '$1 ~ /^(fulfillment-service|osac-operator|osac-aap)$/ { print $1 }' \
+    | sort -u)
+else
+  TOUCHED_COMPONENTS="$REPO_NAME"
+fi
+```
+
+`$TOUCHED_COMPONENTS` may list zero, one, or multiple names. Use it in Steps 2
+and 3 to select which per-component block(s) apply — run every matching block,
+not just the first. If it's empty because the change is purely doc/config
+outside all three subdirectories (e.g. `osac/README.md`), skip the
+component-specific parts of Steps 2 and 3. If it's empty but the change
+touches root-level files that affect multiple components' builds (e.g.
+`osac/go.work`, a root `Makefile`, `.github/workflows/`), don't skip
+validation entirely — read `osac`'s own `AGENTS.md`/`CLAUDE.md` for the
+correct root-level check (a broken `go.work` can break both
+`fulfillment-service` and `osac-operator` builds without either
+component's own validation block catching it).
+
 ## Step 2: Run Validation
 
-Run the repo-specific checks **before** pushing. Read the component's CLAUDE.md if unsure which commands apply.
+Run the checks for every component in `$TOUCHED_COMPONENTS` **before** pushing
+— if it lists more than one, run **every** matching block below in the same
+pass; that's the point of one PR covering multiple mono-repo components. Read
+the component's CLAUDE.md if unsure which commands apply.
 
 ### fulfillment-service
 
 ```bash
+cd "$REPO_DIR/fulfillment-service"
 gofmt -s -w . && git diff --exit-code
 buf generate && git diff --exit-code
 go build ./...
 ginkgo run -r internal
+uv run dev.py lint
 ```
 
 ### osac-operator
 
 ```bash
+cd "$REPO_DIR/osac-operator"
 make fmt && git diff --exit-code
 make lint
 make build
@@ -60,7 +104,9 @@ make manifests generate && git diff --exit-code
 ### osac-aap
 
 ```bash
-ansible-lint
+cd "$REPO_DIR/osac-aap"
+make test
+uv run ansible-lint
 ```
 
 ### osac-installer
@@ -97,21 +143,24 @@ Run:
 git diff main..HEAD --name-only --diff-filter=AMR
 ```
 
-Classify each changed file using the repo-specific rules below:
+Classify each changed file using the component-specific rules below — for
+`osac`, only apply the row(s) matching `$TOUCHED_COMPONENTS` (path patterns
+below already carry the mono-repo subdirectory prefix):
 
 ### File Classification
 
-| Repo | Production files | Test files | Excluded (skip) |
+| Component | Production files | Test files | Excluded (skip) |
 |------|-----------------|------------|-----------------|
-| **fulfillment-service** | `*.go` not `_test.go` | `*_test.go` | `internal/api/`, `*.pb.go`, `migrations/` |
-| **osac-operator** | `*.go` not `_test.go` | `*_test.go` | `api/v1alpha1/zz_generated*`, `config/` |
-| **osac-aap** | `roles/*/tasks/*.yml`, `plugins/**/*.py` | `molecule/*/`, `tests/`, `test_*.py` | `meta/`, `docs/` |
+| **fulfillment-service** | `fulfillment-service/**/*.go` not `_test.go` | `fulfillment-service/**/*_test.go` | `fulfillment-service/internal/api/`, `fulfillment-service/**/*.pb.go`, `fulfillment-service/**/migrations/` |
+| **osac-operator** | `osac-operator/**/*.go` not `_test.go` | `osac-operator/**/*_test.go` | `osac-operator/api/v1alpha1/zz_generated*`, `osac-operator/config/` |
+| **osac-aap** | `osac-aap/roles/*/tasks/*.yml`, `osac-aap/plugins/**/*.py` | `osac-aap/molecule/*/`, `osac-aap/tests/`, `osac-aap/test_*.py` | `osac-aap/meta/`, `osac-aap/docs/` |
 | **osac-installer** | Skip this check entirely | — | — |
 
 For each production file in the diff, check if a corresponding test file also appears in the diff. Matching rules:
 
 - **Go:** `foo.go` → `foo_test.go` in the same directory
 - **Ansible:** `roles/<role>/tasks/*.yml` → `molecule/<role>/` or `tests/` directory has changes
+- **Python:** `osac-aap/plugins/**/*.py` → `osac-aap/tests/` or `osac-aap/test_*.py` has changes
 
 **If gaps exist**, print a warning and continue:
 
@@ -120,7 +169,7 @@ For each production file in the diff, check if a corresponding test file also ap
 
 | Production file changed | Expected test file |
 |------------------------|--------------------|
-| internal/servers/foo_server.go | internal/servers/foo_server_test.go |
+| fulfillment-service/internal/servers/foo_server.go | fulfillment-service/internal/servers/foo_server_test.go |
 
 These files were added or modified without corresponding test changes.
 This is a warning — proceeding with PR creation.
@@ -161,6 +210,10 @@ If no ticket key is found, ask: "Is there a Jira ticket for this work? (e.g., OS
 If none, omit the prefix — just use a descriptive title.
 
 ## Step 6: Create PR
+
+`fulfillment-service`, `osac-operator`, and `osac-aap` share one `origin`/`fork`
+pair — the `osac` mono-repo — so this step creates a single PR covering every
+component touched in `$TOUCHED_COMPONENTS`, not one PR per component.
 
 Determine the upstream repo from the `origin` remote:
 
@@ -208,7 +261,9 @@ Display the PR URL as a clickable markdown link:
 PR created: [#<number>](<url>)
 ```
 
-If cross-repo PRs exist, remind: "Link related PRs in the description (e.g., 'Depends on fulfillment-service#123')."
+If PRs in genuinely separate repos exist (e.g. `osac` + `osac-installer` — not
+just multiple components within `osac`, which is one PR), remind: "Link
+related PRs in the description (e.g., 'Depends on osac-project/osac#123')."
 
 ## Quick Reference
 

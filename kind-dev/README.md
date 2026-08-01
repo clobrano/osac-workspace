@@ -105,7 +105,7 @@ Pods   → api.osac.localhost (CoreDNS rewrites to fulfillment-api.osac.svc.clus
 ```
 
 The setup mirrors the fulfillment-service integration test infrastructure
-(see `fulfillment-service/internal/testing/kind.go`) but extracts it into
+(see `osac/fulfillment-service/internal/testing/kind.go`) but extracts it into
 standalone scripts that any developer can run.
 
 ### Port Mappings
@@ -184,7 +184,7 @@ run heavyweight workloads alongside the control plane.
 
 ```bash
 # Build and load a local fulfillment-service image
-cd fulfillment-service
+cd osac/fulfillment-service
 podman build -t fulfillment-service:dev .
 podman save fulfillment-service:dev -o /tmp/fs.tar
 kind load image-archive /tmp/fs.tar --name osac-dev
@@ -259,7 +259,7 @@ osac create computeinstance --name kind-vm --template osac.templates.ocp_virt_vm
   → fulfillment-service stores it in PostgreSQL
   → fulfillment-controller creates ComputeInstance CR in osac namespace
   → osac-operator picks up CR, calls AWX: POST /api/v2/job_templates/osac-create-compute-instance/launch/
-  → AWX runs the REAL osac-aap playbook (playbook_osac_create_compute_instance.yml)
+  → AWX runs the REAL osac-aap playbook (osac-aap/playbook_osac_create_compute_instance.yml)
   → Playbook creates DataVolume + VirtualMachine CR (with pod network override)
   → KubeVirt boots the VM with KVM hardware acceleration
   → VM Running, Ready=True, IP assigned

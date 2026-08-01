@@ -41,13 +41,14 @@ Re-run `./bootstrap.sh` anytime to update all repos to latest `main`.
 
 Meta-workspace — run `./bootstrap.sh` to clone/update all component repos to latest `main`. **In component repos, read `CLAUDE.md` first** (progressive disclosure). Use that component's `AGENTS.md` where the table below shows **Yes** for tool-agnostic build/test conventions.
 
-Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-service`.
+Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-service`, which was then merged with `osac-operator` and `osac-aap` into the `osac` mono-repo below.
 
 | Component | Description | AGENTS.md |
 |-----------|-------------|-----------|
-| [`fulfillment-service`](https://github.com/osac-project/fulfillment-service) | gRPC server + REST gateway, PostgreSQL, integrated API definitions | Yes |
-| [`osac-operator`](https://github.com/osac-project/osac-operator) | Kubernetes operator for OpenShift clusters via Hosted Control Planes | Yes |
-| [`osac-aap`](https://github.com/osac-project/osac-aap) | Ansible Automation Platform roles for infrastructure provisioning | — |
+| [`osac`](https://github.com/osac-project/osac) | Mono-repo: `fulfillment-service` + `osac-operator` + `osac-aap` (see subdirectories below) | — |
+| `osac/fulfillment-service` | gRPC server + REST gateway, PostgreSQL, integrated API definitions | Yes |
+| `osac/osac-operator` | Kubernetes operator for OpenShift clusters via Hosted Control Planes | Yes |
+| `osac/osac-aap` | Ansible Automation Platform roles for infrastructure provisioning | Yes |
 | [`osac-installer`](https://github.com/osac-project/osac-installer) | Helm charts, Kustomize overlays, and installation prerequisites | Yes |
 | [`osac-test-infra`](https://github.com/osac-project/osac-test-infra) | Integration testing infrastructure | — |
 | [`osac-ui`](https://github.com/osac-project/osac-ui) | OSAC UI web console | Yes |
@@ -61,28 +62,28 @@ Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-s
 
 This workspace has no build step of its own. Each component repo documents build and test commands in its `AGENTS.md` or `CLAUDE.md`.
 
-| Component              | Build                              | Unit Tests               | Lint                       |
-|------------------------|------------------------------------|--------------------------|----------------------------|
-| `fulfillment-service/` | `go build`                         | `ginkgo run -r internal` | `uv run dev.py lint`       |
-| `osac-operator/`       | `make build`                       | `make test`              | `make lint`                |
-| `osac-aap/`            | —                                  | `make test`              | `uv run ansible-lint`      |
-| `osac-installer/`      | `kustomize build overlays/<name>`  | —                        | `helm lint charts/osac/`   |
-| `osac-test-infra/`     | —                                  | —                        | `make lint`                |
-| `osac-ui/`             | `pnpm build`                       | `pnpm test`              | `pnpm lint`                |
+| Component                   | Build                              | Unit Tests               | Lint                     |
+|-----------------------------|-----------------------------------|--------------------------|--------------------------|
+| `osac/fulfillment-service/` | `go build`                        | `ginkgo run -r internal` | `uv run dev.py lint`     |
+| `osac/osac-operator/`       | `make build`                      | `make test`              | `make lint`              |
+| `osac/osac-aap/`            | —                                 | `make test`              | `uv run ansible-lint`    |
+| `osac-installer/`           | `kustomize build overlays/<name>` | —                        | `helm lint charts/osac/` |
+| `osac-test-infra/`          | —                                 | —                        | `make lint`              |
+| `osac-ui/`                  | `pnpm build`                      | `pnpm test`              | `pnpm lint`              |
 
 ### Quick Reference
 
 ```bash
-# fulfillment-service
-cd fulfillment-service
+# osac/fulfillment-service
+cd osac/fulfillment-service
 go build                              # Build
 ginkgo run -r internal                # Unit tests (excludes integration)
 ginkgo run it                         # Integration tests (requires kind)
 IT_KEEP_KIND=true ginkgo run it       # Preserve kind cluster for debugging
 buf lint && buf generate              # Proto lint + codegen
 
-# osac-operator
-cd osac-operator
+# osac/osac-operator
+cd osac/osac-operator
 make image-build image-push IMG=<registry>/osac-operator:tag
 make install                          # Install CRDs
 make deploy IMG=<registry>/osac-operator:tag
@@ -100,13 +101,14 @@ make deploy IMG=<registry>/osac-operator:tag
 
 ### Cross-Component Changes
 
-When a feature spans repos, merge in dependency order:
-1. `fulfillment-service` (proto definitions)
-2. `osac-operator` (CRD types, controllers)
-3. `osac-aap` (Ansible roles/playbooks)
-4. `osac-installer` (submodules, deployment manifests)
+`fulfillment-service`, `osac-operator`, and `osac-aap` live in one mono-repo
+(`osac/`) — a feature spanning them (proto definitions, CRD types, Ansible
+roles/playbooks) lands in a single branch and PR there. `osac-installer`
+remains a separate repo: when a change also needs `osac-installer` updates
+(submodule refs, CI overlays), merge the `osac` PR first, then update
+`osac-installer` to match.
 
-Link PRs in descriptions: "Depends on fulfillment-service#123".
+Link PRs in descriptions: "Depends on osac-project/osac#123".
 
 ## Deployment Coordination
 
@@ -152,7 +154,7 @@ Both PRD and design ingest phases must read all files in `.design/context/`:
 
 Design and implement ingest phases must read the `AGENTS.md` of each component repo affected by the feature — authoritative on API design, database patterns, testing, and build tooling; the generic workspace rules summarize but don't replace them.
 
-For features involving the fulfillment-service API (proto definitions, services, request/response patterns), `fulfillment-service/AGENTS.md` points to [`fulfillment-service/docs/API.md`](fulfillment-service/docs/API.md) — the canonical API design guidelines. Read it before drafting or reviewing proto schemas.
+For features involving the fulfillment-service API (proto definitions, services, request/response patterns), `osac/fulfillment-service/AGENTS.md` points to [`osac/fulfillment-service/docs/API.md`](osac/fulfillment-service/docs/API.md) — the canonical API design guidelines. Read it before drafting or reviewing proto schemas.
 
 ### Template Overrides
 
@@ -231,7 +233,7 @@ OSAC skills are workspace operators, not isolated skill bundles:
 |----------------|--------|---------|
 | File inside the skill directory | Markdown link ([Agent Skills spec](https://agentskills.io/specification)) | `[preflight.md](steps/preflight.md)` |
 | Path at workspace repo root | Backtick path, not a markdown link | `` `presentations/themes/redhat.css` `` |
-| Component or external doc | Backtick path or full URL | `` `fulfillment-service/docs/API.md` `` |
+| Component or external doc | Backtick path or full URL | `` `osac/fulfillment-service/docs/API.md` `` |
 | User-input markers in examples | Backtick the marker | `` `TODO:` `` in meeting notes (not bare `TODO` in headings) |
 | Bad examples in calibration text | Backtick the quoted phrase | `` `handle edge cases appropriately` `` |
 
@@ -240,9 +242,10 @@ Put `CRITICAL` / `IMPORTANT` rules in the first 20% of `SKILL.md` (skillsaw `con
 ## Architecture
 
 ```text
-fulfillment-service    gRPC/REST API server, PostgreSQL, resource lifecycle
-osac-operator          Kubernetes operator, provisions via AAP + Hosted Control Planes
-osac-aap               Ansible playbooks for infrastructure provisioning
+osac/                  Mono-repo: fulfillment-service + osac-operator + osac-aap
+  fulfillment-service  gRPC/REST API server, PostgreSQL, resource lifecycle
+  osac-operator        Kubernetes operator, provisions via AAP + Hosted Control Planes
+  osac-aap             Ansible playbooks for infrastructure provisioning
 osac-installer         Helm charts + Kustomize overlays, deploys all components to OpenShift
 osac-test-infra        E2E test playbooks against fulfillment-service gRPC API
 osac-ui                Web console (React, PatternFly 6, pnpm workspace)
@@ -309,7 +312,7 @@ backend has not yet returned — these are real requirements, not speculation.
 
 Run `cd osac-ux && node scripts/gen-api-diff.mjs` to surface API gaps against the current UI.
 
-## Common Fix Locations (fulfillment-service)
+## Common Fix Locations (osac/fulfillment-service)
 
 | Bug pattern | File(s) to check |
 |-------------|-----------------|
@@ -319,9 +322,20 @@ Run `cd osac-ux && node scripts/gen-api-diff.mjs` to surface API gaps against th
 
 ## OpenShift Deployment
 
+The Kustomize `manifests/` directory was removed from `fulfillment-service` — Helm is
+now the only supported deployment method, and installation requires cert-manager, a
+PostgreSQL operator, and Keycloak to be set up first. See
+[`osac/fulfillment-service/docs/INSTALL.md`](osac/fulfillment-service/docs/INSTALL.md)
+for the full OpenShift installation guide (that guide's first step is enabling HTTP/2,
+shown below).
+
 ```bash
 kubectl annotate ingresses.config/cluster ingress.operator.openshift.io/default-enable-http2=true
-kubectl apply -k fulfillment-service/manifests
+```
+
+Once deployed, verify with:
+
+```bash
 export token=$(kubectl create token -n osac client)
 export route=$(kubectl get route -n osac fulfillment-api -o json | jq -r '.spec.host')
 grpcurl -insecure -H "Authorization: Bearer ${token}" ${route}:443 osac.public.v1.VirtualNetworks/List

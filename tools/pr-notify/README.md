@@ -72,9 +72,7 @@ Copy `config.example.toml` to `config.toml` and edit:
 ```toml
 # Used by generate.py and notify.py
 repos = [
-    "osac-project/fulfillment-service",
-    "osac-project/osac-operator",
-    "osac-project/osac-aap",
+    "osac-project/osac",
     "osac-project/osac-ui",
     "osac-project/enhancement-proposals",
 ]

@@ -116,7 +116,7 @@ rules:
     # regex-timeout: 2.0
 
   # Detect markdown links where the target file does not exist
-  # OSAC skills reference workspace-root paths (presentations/, fulfillment-service/, …)
+  # OSAC skills reference workspace-root paths (presentations/, osac/fulfillment-service/, …)
   # outside skills/ — downgrade to info; see AGENTS.md skill authoring conventions.
   content-broken-internal-reference:
     enabled: auto
@@ -147,12 +147,13 @@ rules:
 
   # Detect instructions that should be automated as hooks instead of prose instructions
   # The buf-lint suggestion this rule raises on protobuf-conventions.md is
-  # already covered: bootstrap.sh installs a pre-commit hook (buf-lint,
-  # golangci-lint) into fulfillment-service and other component repos that
-  # ship a .pre-commit-config.yaml. A Claude Code PostToolUse hook would be
-  # additive at best (git-level enforcement already runs) and would only
-  # cover Claude Code sessions, not Cursor/Gemini CLI — accepted as info,
-  # not pursued further.
+  # already covered: bootstrap.sh installs a pre-commit hook into osac (and
+  # other component repos that ship a .pre-commit-config.yaml) — osac's own
+  # config has path-scoped buf-lint/golangci-lint hooks covering the
+  # fulfillment-service and osac-operator subdirectories. A Claude Code
+  # PostToolUse hook would be additive at best (git-level enforcement
+  # already runs) and would only cover Claude Code sessions, not
+  # Cursor/Gemini CLI — accepted as info, not pursued further.
   content-hook-candidate:
     enabled: auto
     severity: info
@@ -384,9 +385,16 @@ exclude:
   - "**/prd/**"
   - "**/_shared/**"
   # Bootstrap component clones (present locally after bootstrap.sh)
+  - "osac/**"
+  # Temporary: mirrors the same-named .gitignore entries — keep excluding the
+  # pre-mono-repo standalone clone paths until quarantine has fully soaked.
+  # Remove once the old repos are archived upstream (tracked by OSAC-1737).
   - "fulfillment-service/**"
   - "osac-operator/**"
   - "osac-aap/**"
+  # Quarantined old standalone clones of components merged into osac (see
+  # bootstrap.sh's MERGED_COMPONENTS/quarantine_merged_component and .gitignore)
+  - ".legacy-repos/**"
   - "osac-docs/**"
   - "osac-installer/**"
   - "osac-test-infra/**"

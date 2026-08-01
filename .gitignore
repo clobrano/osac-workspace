@@ -57,6 +57,13 @@ __pycache__/
 *.pyc
 
 # Bootstrap-managed repositories (cloned by bootstrap.sh)
+osac/
+# Temporary: keep ignoring the pre-mono-repo standalone clone paths until
+# quarantine has fully soaked (see bootstrap.sh's quarantine_merged_component()).
+# A workspace that hasn't re-run bootstrap.sh yet still has these directories
+# on disk; without these entries they'd show up as untracked and unprotected
+# by Skillsaw. Remove once the old repos are archived upstream (tracked by
+# OSAC-1737).
 fulfillment-service/
 osac-operator/
 osac-aap/
@@ -71,6 +78,10 @@ host-management-openstack/
 
 # Bootstrap-managed reference repos (cloned read-only, no fork remote)
 osac-ux/
+
+# Quarantined clones of components merged into osac-project/osac — see
+# bootstrap.sh's quarantine_merged_component()
+.legacy-repos/
 
 docs/*
 !docs/pr-dashboard/
