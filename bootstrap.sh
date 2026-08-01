@@ -99,13 +99,11 @@ ensure_fork_remote() {
 
 REPOS=(
   "osac"
-  "osac-installer"
   "osac-test-infra"
   "osac-ui"
   "enhancement-proposals"
   "docs:osac-docs"
   "host-management-openstack"
-  "bare-metal-fulfillment-operator"
   "osac-csi-driver"
 )
 
@@ -127,6 +125,8 @@ MERGED_COMPONENTS=(
   "fulfillment-service"
   "osac-operator"
   "osac-aap"
+  "osac-installer"
+  "bare-metal-fulfillment-operator"
 )
 LEGACY_REPOS_DIR=".legacy-repos"
 
