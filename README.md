@@ -46,8 +46,8 @@ Use `--no-fork` if you only need read-only access or are running in CI. To overr
 
 ## Components
 
-| Repository | Description |
-|------------|-------------|
+| Component | Description |
+|-----------|-------------|
 | [osac](https://github.com/osac-project/osac) | Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator (see subdirectories below) |
 | `osac/fulfillment-service` | gRPC/REST API server with PostgreSQL backend — manages VirtualNetworks, Subnets, SecurityGroups, ComputeInstances |
 | `osac/osac-operator` | Kubernetes operator for deploying OpenShift clusters via Hosted Control Planes |

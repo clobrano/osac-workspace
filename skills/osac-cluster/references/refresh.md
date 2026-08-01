@@ -16,8 +16,8 @@ below refers to the `osac-installer/` subdirectory of that clone:
 ```bash
 git clone https://github.com/osac-project/osac.git
 cd osac
-git submodule update --init --recursive
 git fetch origin main && git rebase origin/main
+git submodule update --init --recursive
 cd osac-installer
 ```
 

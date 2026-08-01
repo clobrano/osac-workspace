@@ -114,7 +114,7 @@ uv run ansible-lint
 ### osac-installer
 
 ```bash
-cd "$REPO_DIR/osac/osac-installer"
+cd "$REPO_DIR/osac-installer"
 git submodule update --init --recursive
 helm dependency build charts/osac/
 helm lint charts/osac-operators/
@@ -149,7 +149,7 @@ to be initialized (`git submodule update --init --recursive`).
 ### bare-metal-fulfillment-operator
 
 ```bash
-cd "$REPO_DIR/osac/bare-metal-fulfillment-operator"
+cd "$REPO_DIR/bare-metal-fulfillment-operator"
 make fmt && git diff --exit-code
 make lint
 make build
