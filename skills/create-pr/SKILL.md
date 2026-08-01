@@ -36,15 +36,17 @@ BRANCH=$(git branch --show-current)
 
 ### Mono-repo component detection
 
-`osac` is a mono-repo containing `fulfillment-service`, `osac-operator`, and
-`osac-aap` as subdirectories — a single PR can touch more than one of them.
+`osac` is a mono-repo containing `fulfillment-service`, `osac-operator`,
+`osac-aap`, `osac-installer`, and `bare-metal-fulfillment-operator` as
+subdirectories — a single PR can touch more than one of them.
 When `$REPO_NAME` is `osac`, detect which subdirectories this branch actually
 touches instead of assuming a single component:
 
 ```bash
-# Keep the (fulfillment-service|osac-operator|osac-aap) list in sync with
-# bootstrap.sh's MERGED_COMPONENTS array and Step 3's File Classification
-# table below if a future component merges into osac or one of these splits out.
+# Keep the (fulfillment-service|osac-operator|osac-aap|osac-installer|
+# bare-metal-fulfillment-operator) list in sync with bootstrap.sh's
+# MERGED_COMPONENTS array and Step 3's File Classification table below if a
+# future component merges into osac or one of these splits out.
 if [[ "$REPO_NAME" == "osac" ]]; then
   # Split the diff and the filter into two steps: a `git diff` failure must
   # still propagate under `set -e`/`pipefail`, but "no merged-component
@@ -53,7 +55,7 @@ if [[ "$REPO_NAME" == "osac" ]]; then
   # would otherwise mask a genuine `git diff` failure too).
   CHANGED_PATHS=$(git diff main..HEAD --name-only)
   TOUCHED_COMPONENTS=$(printf '%s\n' "$CHANGED_PATHS" \
-    | awk -F/ '$1 ~ /^(fulfillment-service|osac-operator|osac-aap)$/ { print $1 }' \
+    | awk -F/ '$1 ~ /^(fulfillment-service|osac-operator|osac-aap|osac-installer|bare-metal-fulfillment-operator)$/ { print $1 }' \
     | sort -u)
 else
   TOUCHED_COMPONENTS="$REPO_NAME"
@@ -63,7 +65,7 @@ fi
 `$TOUCHED_COMPONENTS` may list zero, one, or multiple names. Use it in Steps 2
 and 3 to select which per-component block(s) apply — run every matching block,
 not just the first. If it's empty because the change is purely doc/config
-outside all three subdirectories (e.g. `osac/README.md`), skip the
+outside all five subdirectories (e.g. `osac/README.md`), skip the
 component-specific parts of Steps 2 and 3. If it's empty but the change
 touches root-level files that affect multiple components' builds (e.g.
 `osac/go.work`, a root `Makefile`, `.github/workflows/`), don't skip
@@ -112,18 +114,45 @@ uv run ansible-lint
 ### osac-installer
 
 ```bash
-# Always run:
-bash scripts/kustomize-build-all.sh
+cd "$REPO_DIR/osac/osac-installer"
+git submodule update --init --recursive
+helm dependency build charts/osac/
+helm lint charts/osac-operators/
+helm lint charts/osac-prereqs/
+for f in values/*/values.yaml; do
+  helm template osac charts/osac/ --values "$f" \
+    --set service.externalHostname=fulfillment-api.example.com \
+    --set service.internalHostname=fulfillment-internal-api.example.com \
+    > /dev/null
+done
 ```
 
-If submodules changed (`git diff main --submodule | grep -q Submodule`), also run:
+Mirrors the `helm-lint-installer` job in `osac`'s `.github/workflows/helm-lint.yaml`:
+`charts/osac/`'s values schema requires `service.externalHostname`/`internalHostname`,
+which every real values file leaves blank for runtime injection, so linting/templating
+the umbrella chart needs the same placeholder `--set` overrides CI uses — a bare
+`helm lint charts/osac/` (e.g. via `make helm-lint`) fails on schema validation
+regardless of what the PR actually changes.
+
+If the change touches `values/*/values.yaml` image tags directly, also run:
 
 ```bash
-bash scripts/sync-image-tags.sh
-python3 scripts/sync-authconfig-rego.py
+scripts/sync-image-tags.sh
 ```
 
-The sync scripts support `--fix` to auto-correct drift. All scripts require submodules to be initialized (`git submodule update --init --recursive`).
+`--fix` auto-corrects drift against `osac`'s current commit SHA. Requires submodules
+to be initialized (`git submodule update --init --recursive`).
+
+### bare-metal-fulfillment-operator
+
+```bash
+cd "$REPO_DIR/osac/bare-metal-fulfillment-operator"
+make fmt && git diff --exit-code
+make lint
+make build
+make test
+make manifests generate && git diff --exit-code
+```
 
 ### Other repos
 
@@ -154,7 +183,8 @@ below already carry the mono-repo subdirectory prefix):
 | **fulfillment-service** | `fulfillment-service/**/*.go` not `_test.go` | `fulfillment-service/**/*_test.go` | `fulfillment-service/internal/api/`, `fulfillment-service/**/*.pb.go`, `fulfillment-service/**/migrations/` |
 | **osac-operator** | `osac-operator/**/*.go` not `_test.go` | `osac-operator/**/*_test.go` | `osac-operator/api/v1alpha1/zz_generated*`, `osac-operator/config/` |
 | **osac-aap** | `osac-aap/roles/*/tasks/*.yml`, `osac-aap/plugins/**/*.py` | `osac-aap/molecule/*/`, `osac-aap/tests/`, `osac-aap/test_*.py` | `osac-aap/meta/`, `osac-aap/docs/` |
-| **osac-installer** | Skip this check entirely | — | — |
+| **osac-installer** | Skip this check entirely — Helm charts/values, no unit-testable production/test file split | — | — |
+| **bare-metal-fulfillment-operator** | `bare-metal-fulfillment-operator/**/*.go` not `_test.go` | `bare-metal-fulfillment-operator/**/*_test.go` | `bare-metal-fulfillment-operator/api/v1alpha1/zz_generated*`, `bare-metal-fulfillment-operator/config/` |
 
 For each production file in the diff, check if a corresponding test file also appears in the diff. Matching rules:
 
@@ -211,9 +241,10 @@ If none, omit the prefix — just use a descriptive title.
 
 ## Step 6: Create PR
 
-`fulfillment-service`, `osac-operator`, and `osac-aap` share one `origin`/`fork`
-pair — the `osac` mono-repo — so this step creates a single PR covering every
-component touched in `$TOUCHED_COMPONENTS`, not one PR per component.
+`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`, and
+`bare-metal-fulfillment-operator` share one `origin`/`fork` pair — the `osac`
+mono-repo — so this step creates a single PR covering every component touched
+in `$TOUCHED_COMPONENTS`, not one PR per component.
 
 Determine the upstream repo from the `origin` remote:
 
@@ -261,7 +292,7 @@ Display the PR URL as a clickable markdown link:
 PR created: [#<number>](<url>)
 ```
 
-If PRs in genuinely separate repos exist (e.g. `osac` + `osac-installer` — not
+If PRs in genuinely separate repos exist (e.g. `osac` + `osac-test-infra` — not
 just multiple components within `osac`, which is one PR), remind: "Link
 related PRs in the description (e.g., 'Depends on osac-project/osac#123')."
 
