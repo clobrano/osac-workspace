@@ -111,7 +111,7 @@ Validation rules, default values, and descriptions come from the schema — the 
 
 Three coordinated actions bring a new field into the Wizard:
 
-**1. osac-installer PR** — add the value to `values.yaml` and its schema to `values.schema.json`
+**1. `osac` PR** — add the value to `osac-installer/values.yaml` and its schema to `osac-installer/values.schema.json`
 ```yaml
 # values.yaml                      # values.schema.json
 dns:                                "dns":

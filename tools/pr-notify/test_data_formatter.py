@@ -11,9 +11,9 @@ from models import CheckRun, ClassifiedPR, PRData, PRStatus
 def _make_pr_data(**overrides) -> PRData:
     defaults = {
         "title": "Fix widget rendering",
-        "url": "https://github.com/osac-project/fulfillment-service/pull/42",
+        "url": "https://github.com/osac-project/osac/pull/42",
         "author": "alice",
-        "repo": "osac-project/fulfillment-service",
+        "repo": "osac-project/osac",
         "created_at": "2026-04-20T10:00:00Z",
         "is_draft": False,
         "labels": [],
@@ -63,7 +63,7 @@ class TestDashboardData(unittest.TestCase):
             _make_classified(status=PRStatus.APPROVED),
             _make_classified(status=PRStatus.DRAFT),
         ]
-        data = format_dashboard_data(prs, ["osac-project/fulfillment-service"])
+        data = format_dashboard_data(prs, ["osac-project/osac"])
         self.assertEqual(data["summary"]["needs_review"], 2)
         self.assertEqual(data["summary"]["ci_failing"], 1)
         self.assertEqual(data["summary"]["approved"], 1)
@@ -74,25 +74,25 @@ class TestDashboardData(unittest.TestCase):
             _make_classified(status=PRStatus.NEEDS_REVIEW, age_days=10),
             _make_classified(status=PRStatus.NEEDS_REVIEW, age_days=2),
         ]
-        data = format_dashboard_data(prs, ["osac-project/fulfillment-service"])
+        data = format_dashboard_data(prs, ["osac-project/osac"])
         self.assertEqual(data["summary"]["stale"], 1)
 
     def test_repos_grouped(self):
         prs = [
-            _make_classified(repo="osac-project/fulfillment-service"),
-            _make_classified(repo="osac-project/osac-operator"),
-            _make_classified(repo="osac-project/fulfillment-service"),
+            _make_classified(repo="osac-project/osac"),
+            _make_classified(repo="osac-project/osac-ui"),
+            _make_classified(repo="osac-project/osac"),
         ]
-        data = format_dashboard_data(prs, ["osac-project/fulfillment-service", "osac-project/osac-operator"])
+        data = format_dashboard_data(prs, ["osac-project/osac", "osac-project/osac-ui"])
 
         self.assertEqual(len(data["repos"]), 2)
         names = [r["name"] for r in data["repos"]]
-        self.assertIn("osac-project/fulfillment-service", names)
-        self.assertIn("osac-project/osac-operator", names)
+        self.assertIn("osac-project/osac", names)
+        self.assertIn("osac-project/osac-ui", names)
 
-        fs_repo = next(r for r in data["repos"] if r["name"] == "osac-project/fulfillment-service")
+        fs_repo = next(r for r in data["repos"] if r["name"] == "osac-project/osac")
         self.assertEqual(len(fs_repo["prs"]), 2)
-        self.assertEqual(fs_repo["pulls_url"], "https://github.com/osac-project/fulfillment-service/pulls")
+        self.assertEqual(fs_repo["pulls_url"], "https://github.com/osac-project/osac/pulls")
 
     def test_pr_serialization(self):
         prs = [_make_classified(
@@ -102,7 +102,7 @@ class TestDashboardData(unittest.TestCase):
             author="alice",
             age_days=5,
         )]
-        data = format_dashboard_data(prs, ["osac-project/fulfillment-service"])
+        data = format_dashboard_data(prs, ["osac-project/osac"])
         pr = data["repos"][0]["prs"][0]
 
         self.assertEqual(pr["title"], "Fix bug")
@@ -117,7 +117,7 @@ class TestDashboardData(unittest.TestCase):
             CheckRun(name="lint", conclusion="FAILURE", details_url="https://example.com/2"),
         ])
         cpr = ClassifiedPR(pr=pr_data, status=PRStatus.NEEDS_REVIEW, age_days=1)
-        data = format_dashboard_data([cpr], ["osac-project/fulfillment-service"])
+        data = format_dashboard_data([cpr], ["osac-project/osac"])
 
         checks = data["repos"][0]["prs"][0]["check_runs"]
         self.assertEqual(len(checks), 2)
@@ -133,18 +133,18 @@ class TestDashboardData(unittest.TestCase):
             CheckRun(name="build", conclusion="FAILURE", details_url=""),
         ])
         cpr = ClassifiedPR(pr=pr_data, status=PRStatus.NEEDS_REVIEW, age_days=1)
-        data = format_dashboard_data([cpr], ["osac-project/fulfillment-service"])
+        data = format_dashboard_data([cpr], ["osac-project/osac"])
 
         self.assertEqual(len(data["ci_health"]), 1)
         ci = data["ci_health"][0]
-        self.assertEqual(ci["repo"], "osac-project/fulfillment-service")
+        self.assertEqual(ci["repo"], "osac-project/osac")
         self.assertEqual(ci["total_checks"], 3)
         self.assertEqual(ci["passed"], 2)
         self.assertEqual(ci["pass_rate"], 66)
 
     def test_ci_health_empty_when_no_checks(self):
         prs = [_make_classified()]
-        data = format_dashboard_data(prs, ["osac-project/fulfillment-service"])
+        data = format_dashboard_data(prs, ["osac-project/osac"])
         self.assertEqual(data["ci_health"], [])
 
     def test_generated_at_format(self):

@@ -55,7 +55,7 @@ Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-s
 | [`osac-ui`](https://github.com/osac-project/osac-ui) | OSAC UI web console | Yes |
 | [`osac-ux`](https://github.com/osac-project/osac-ux) | React 19 + PatternFly 6 UI console — read-only UI reference | Yes (`osac-ux/AGENTS.md`) |
 | [`enhancement-proposals`](https://github.com/osac-project/enhancement-proposals) | Design documents and RFCs | — |
-| [`docs`](https://github.com/osac-project/docs) | Architecture docs and guides (see `docs/architecture/`) | — |
+| [`docs`](https://github.com/osac-project/docs) | Architecture docs and guides (see `osac-docs/architecture/`) | — |
 | [`host-management-openstack`](https://github.com/osac-project/host-management-openstack) | Bare metal host management via OpenStack | — |
 
 ## Build and Test
@@ -64,7 +64,7 @@ This workspace has no build step of its own. Each component repo documents build
 
 | Component                               | Build        | Unit Tests               | Lint                  |
 |------------------------------------------|--------------|--------------------------|-----------------------|
-| `osac/fulfillment-service/`             | `go build`   | `ginkgo run -r internal` | `uv run dev.py lint`  |
+| `osac/fulfillment-service/`             | `go build ./...` | `ginkgo run -r internal` | `uv run dev.py lint`  |
 | `osac/osac-operator/`                   | `make build` | `make test`              | `make lint`           |
 | `osac/osac-aap/`                        | —            | `make test`              | `uv run ansible-lint` |
 | `osac/osac-installer/`                  | —            | —                        | `make helm-lint`      |
@@ -79,7 +79,7 @@ This workspace has no build step of its own. Each component repo documents build
 ```bash
 # osac/fulfillment-service
 cd osac/fulfillment-service
-go build                              # Build
+go build ./...                        # Build
 ginkgo run -r internal                # Unit tests (excludes integration)
 ginkgo run it                         # Integration tests (requires kind)
 IT_KEEP_KIND=true ginkgo run it       # Preserve kind cluster for debugging
@@ -272,9 +272,7 @@ VirtualNetwork → L2 network with CIDR (child of NetworkClass)
   ├── Subnet → CIDR range within VirtualNetwork
   └── SecurityGroup → firewall rules
 ComputeInstance → KubeVirt VM, attached to Subnets + SecurityGroups
-PublicIPPool → IP address ranges
-  ├── PublicIP → allocated from pool
-  └── PublicIPAttachment → binds PublicIP to ComputeInstance
+NatGateway → child of VirtualNetwork, SNATs egress traffic through an ExternalIP
 ExternalIPPool → external IP address ranges
   ├── ExternalIP → allocated from pool
   └── ExternalIPAttachment → binds ExternalIP to ComputeInstance
@@ -286,7 +284,7 @@ The osac-operator uses controller-runtime to reconcile OSAC custom resources on 
 
 - **All controllers follow the same reconciliation pattern**: finalizer → status update → provisioning/deprovisioning lifecycle
 - **Shared provisioning lifecycle**: Controllers use `provisioning.RunProvisioningLifecycle()` for provision and manual deprovision handling
-- **CRD types**: ClusterOrder, ComputeInstance, ExternalIP, ExternalIPAttachment, ExternalIPPool, Job, PublicIP, PublicIPAttachment, PublicIPPool, SecurityGroup, Subnet, Tenant, VirtualNetwork
+- **CRD types**: ClusterOrder, ComputeInstance, ExternalIP, ExternalIPAttachment, ExternalIPPool, Job, NatGateway, SecurityGroup, Subnet, Tenant, VirtualNetwork
 - **Multi-cluster support**: Controllers use `multicluster-runtime` for management/workload cluster separation
 - **Management-state annotation**: All controllers should check `osac.openshift.io/management-state` and skip reconciliation when set to `Unmanaged`
 - **Namespace isolation**: Networking controllers filter to a configured namespace via `NetworkingNamespacePredicate`
@@ -340,13 +338,15 @@ for the full OpenShift installation guide (that guide's first step is enabling H
 shown below).
 
 ```bash
-kubectl annotate ingresses.config/cluster ingress.operator.openshift.io/default-enable-http2=true
+oc annotate ingresses.config.openshift.io cluster ingress.operator.openshift.io/default-enable-http2=true
 ```
 
-Once deployed, verify with:
+Once deployed, verify with the `osac` CLI (see INSTALL.md's "Verify the installation" for the full
+sequence, including extracting the CA bundle):
 
 ```bash
-export token=$(kubectl create token -n osac client)
-export route=$(kubectl get route -n osac fulfillment-api -o json | jq -r '.spec.host')
-grpcurl -insecure -H "Authorization: Bearer ${token}" ${route}:443 osac.public.v1.VirtualNetworks/List
+osac login --ca-file bundle.pem --flow credentials --client-id osac-admin \
+  --client-secret "${OSAC_ADMIN_CLIENT_SECRET}" --private \
+  https://fulfillment-internal-api-osac.${DOMAIN}
+osac get clusters
 ```

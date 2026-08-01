@@ -357,13 +357,13 @@ export KUBECONFIG=~/.kube/dev.kubeconfig
 cluster-tool boot --flavor vmaas-4-22 --name dev --pull-secret values/vmaas-ci/pull-secret.json --server myserver
 export KUBECONFIG=~/.kube/dev.kubeconfig
 
-cd <path-to-osac-installer>
+cd <path-to-osac-installer>  # osac-installer/ subdir of your osac mono-repo clone
 git fetch origin main && git rebase origin/main
+git submodule update --init --recursive
 
 env \
     VALUES_FILE=values/vmaas-ci/values.yaml \
     INSTALLER_NAMESPACE=osac-e2e-ci \
-    INSTALLER_VM_TEMPLATE=osac.templates.ocp_virt_vm \
     python3 ./scripts/refresh-after-snapshot.py
 ```
 
@@ -426,7 +426,7 @@ ssh root@<server> "free -g"             # Enough RAM?
 Make sure `osac` (which contains `osac-installer/`) is up to date with origin/main:
 
 ```bash
-cd <path-to-osac-installer>
+cd <path-to-osac-installer>  # osac-installer/ subdir of your osac mono-repo clone
 git fetch origin main
 git rebase origin/main
 git submodule update --init --recursive

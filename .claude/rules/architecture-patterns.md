@@ -22,12 +22,8 @@ Networking Resources:
   NetworkClass (platform-defined, read-only for tenants)
   └── VirtualNetwork (tenant L2 network with CIDR)
         ├── Subnet (CIDR range within VirtualNetwork)
-        └── SecurityGroup (firewall rules scoped to VirtualNetwork)
-
-Public IP Resources:
-  PublicIPPool (platform-defined, IP address ranges)
-  ├── PublicIP (allocated from pool)
-  └── PublicIPAttachment (binds PublicIP to ComputeInstance)
+        ├── SecurityGroup (firewall rules scoped to VirtualNetwork)
+        └── NatGateway (SNATs egress traffic through an ExternalIP)
 
 External IP Resources:
   ExternalIPPool (platform-defined, external IP ranges)
@@ -56,6 +52,7 @@ Parent-child relationships use owner reference annotations (`osac.openshift.io/o
 - Requires `/etc/hosts` entries:
   - `127.0.0.1 keycloak.keycloak.svc.cluster.local`
   - `127.0.0.1 fulfillment-api.osac.svc.cluster.local`
+  - `127.0.0.1 fulfillment-internal-api.osac.svc.cluster.local`
 - Use `IT_KEEP_KIND=true` to preserve cluster for debugging
 - Clean up with: `kind delete cluster --name fulfillment-service-it`
 

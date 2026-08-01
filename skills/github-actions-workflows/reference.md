@@ -546,11 +546,12 @@ to any test/verification script, not just the workflows it exercises:
   rather than hardcoding it, and provide an explicit skip switch (e.g.
   `SELF_CHECK_SKIP_LIVE=1`) for offline/sandboxed runs. The test's own
   reliability shouldn't be permanently coupled to one third party's tag
-  never disappearing or a network call always succeeding. (This default
-  currently resolves to the "skip: couldn't resolve..." path until
-  `osac-project/osac` cuts its first tag post-mono-repo-merge - override
-  with `SELF_CHECK_REPO=osac-project/osac-operator` for live coverage
-  until then.)
+  never disappearing or a network call always succeeding. (`osac-project/osac`
+  now carries component-prefixed release tags per OSAC-3467, e.g.
+  `fulfillment-service/v0.0.81` - if the default tag in `self-check.sh`
+  starts resolving to "skip: couldn't resolve...", it's been pruned;
+  bump it to whatever currently exists via `gh api
+  repos/osac-project/osac/tags`.)
 - **If any step degrades to "skip" rather than "fail" when an optional
   tool is missing, say so wherever the script's guarantee is described.**
   An all-green run with `actionlint`/`gh`/etc. absent is a materially

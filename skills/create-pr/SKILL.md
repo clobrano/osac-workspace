@@ -185,15 +185,15 @@ below already carry the mono-repo subdirectory prefix):
 |------|-----------------|------------|-----------------|
 | **fulfillment-service** | `fulfillment-service/**/*.go` not `_test.go` | `fulfillment-service/**/*_test.go` | `fulfillment-service/internal/api/`, `fulfillment-service/**/*.pb.go`, `fulfillment-service/**/migrations/` |
 | **osac-operator** | `osac-operator/**/*.go` not `_test.go` | `osac-operator/**/*_test.go` | `osac-operator/api/v1alpha1/zz_generated*`, `osac-operator/config/` |
-| **osac-aap** | `osac-aap/roles/*/tasks/*.yml`, `osac-aap/plugins/**/*.py` | `osac-aap/molecule/*/`, `osac-aap/tests/`, `osac-aap/test_*.py` | `osac-aap/meta/`, `osac-aap/docs/` |
+| **osac-aap** | `osac-aap/collections/ansible_collections/osac/**/roles/**/tasks/*.yml`, `osac-aap/collections/ansible_collections/osac/**/plugins/**/*.py` | `osac-aap/tests/unit/**`, `osac-aap/tests/integration/targets/**` | `osac-aap/collections/ansible_collections/osac/**/meta/`, `osac-aap/docs/` |
 | **osac-installer** | Skip this check entirely — Helm charts/values, no unit-testable production/test file split | — | — |
 | **bare-metal-fulfillment-operator** | `bare-metal-fulfillment-operator/**/*.go` not `_test.go` | `bare-metal-fulfillment-operator/**/*_test.go` | `bare-metal-fulfillment-operator/api/v1alpha1/zz_generated*`, `bare-metal-fulfillment-operator/config/` |
 
 For each production file in the diff, check if a corresponding test file also appears in the diff. Matching rules:
 
 - **Go:** `foo.go` → `foo_test.go` in the same directory
-- **Ansible:** `roles/<role>/tasks/*.yml` → `molecule/<role>/` or `tests/` directory has changes
-- **Python:** `osac-aap/plugins/**/*.py` → `osac-aap/tests/` or `osac-aap/test_*.py` has changes
+- **Ansible:** `collections/ansible_collections/osac/<ns>/roles/<role>/tasks/*.yml` → `osac-aap/tests/integration/targets/<role>/` has changes
+- **Python:** `osac-aap/collections/ansible_collections/osac/**/plugins/**/*.py` → `osac-aap/tests/unit/**` has changes
 
 **If gaps exist**, print a warning and continue:
 
