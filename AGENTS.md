@@ -41,16 +41,17 @@ Re-run `./bootstrap.sh` anytime to update all repos to latest `main`.
 
 Meta-workspace — run `./bootstrap.sh` to clone/update all component repos to latest `main`. **In component repos, read `CLAUDE.md` first** (progressive disclosure). Use that component's `AGENTS.md` where the table below shows **Yes** for tool-agnostic build/test conventions.
 
-Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-service`, which was then merged with `osac-operator`, `osac-aap`, `osac-installer`, and `bare-metal-fulfillment-operator` into the `osac` mono-repo below.
+Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-service`, which was then merged with `osac-operator`, `osac-aap`, `osac-installer`, `bare-metal-fulfillment-operator`, and `osac-csi-driver` into the `osac` mono-repo below.
 
 | Component | Description | AGENTS.md |
 |-----------|-------------|-----------|
-| [`osac`](https://github.com/osac-project/osac) | Mono-repo: `fulfillment-service` + `osac-operator` + `osac-aap` + `osac-installer` + `bare-metal-fulfillment-operator` (see subdirectories below) | — |
+| [`osac`](https://github.com/osac-project/osac) | Mono-repo: `fulfillment-service` + `osac-operator` + `osac-aap` + `osac-installer` + `bare-metal-fulfillment-operator` + `osac-csi-driver` (see subdirectories below) | — |
 | `osac/fulfillment-service` | gRPC server + REST gateway, PostgreSQL, integrated API definitions | Yes |
 | `osac/osac-operator` | Kubernetes operator for OpenShift clusters via Hosted Control Planes | Yes |
 | `osac/osac-aap` | Ansible Automation Platform roles for infrastructure provisioning | Yes |
 | `osac/osac-installer` | Helm charts and installation prerequisites | Yes |
 | `osac/bare-metal-fulfillment-operator` | Kubernetes operator for bare metal fulfillment | Yes |
+| `osac/osac-csi-driver` | CSI storage driver, routes to vendor backends via fulfillment-service storage tiers | — |
 | [`osac-test-infra`](https://github.com/osac-project/osac-test-infra) | Integration testing infrastructure | — |
 | [`osac-ui`](https://github.com/osac-project/osac-ui) | OSAC UI web console | Yes |
 | [`osac-ux`](https://github.com/osac-project/osac-ux) | React 19 + PatternFly 6 UI console — read-only UI reference | Yes (`osac-ux/AGENTS.md`) |
@@ -69,6 +70,7 @@ This workspace has no build step of its own. Each component repo documents build
 | `osac/osac-aap/`                        | —            | `make test`              | `uv run ansible-lint` |
 | `osac/osac-installer/`                  | —            | —                        | `make helm-lint`      |
 | `osac/bare-metal-fulfillment-operator/` | `make build` | `make test`              | `make lint`           |
+| `osac/osac-csi-driver/`                 | `make build` | `make test`              | `make lint`           |
 | `osac-test-infra/`                      | —            | —                        | `make lint`           |
 | `osac-ui/`                              | `pnpm build` | `pnpm test`              | `pnpm lint`            |
 
@@ -104,10 +106,11 @@ make deploy IMG=<registry>/osac-operator:tag
 
 ### Cross-Component Changes
 
-`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`, and
-`bare-metal-fulfillment-operator` all live in one mono-repo (`osac/`) — a
-feature spanning any of them (proto definitions, CRD types, Ansible
-roles/playbooks, Helm values) lands in a single branch and PR there.
+`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`,
+`bare-metal-fulfillment-operator`, and `osac-csi-driver` all live in one
+mono-repo (`osac/`) — a feature spanning any of them (proto definitions,
+CRD types, Ansible roles/playbooks, Helm values) lands in a single branch
+and PR there.
 
 Link PRs in descriptions: "Depends on osac-project/osac#123".
 
@@ -125,7 +128,7 @@ explicit update:
 
 - **New CRD types** in `osac-operator` → register in the `fulfillment-service` reconciler (an in-repo change, same PR)
 - **`osac-ui`** → a real external dependency (OCI chart + image, version-tagged), bumped deliberately when a new release is needed
-- **`osac-csi-driver`** → the one remaining genuine git submodule, under `osac/osac-installer/base/`; bump it with a normal `git submodule update --remote`, then run `make sync-charts` in `osac/osac-installer` to rebuild chart dependencies
+- **`osac-csi-driver`** → also an in-repo component now (no more git submodules exist anywhere in `osac`), but `sync-image-tags.sh` doesn't cover its image tag yet — bump the `csiDriver`/`csiBackends` image tags in the values files by hand until that script is updated
 
 See `reference/CONVENTIONS.md` for the full dependency table (regenerated via the repo-intel tooling, not hand-edited).
 
@@ -251,12 +254,13 @@ Put `CRITICAL` / `IMPORTANT` rules in the first 20% of `SKILL.md` (skillsaw `con
 ## Architecture
 
 ```text
-osac/                              Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator
+osac/                              Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator + osac-csi-driver
   fulfillment-service              gRPC/REST API server, PostgreSQL, resource lifecycle
   osac-operator                    Kubernetes operator, provisions via AAP + Hosted Control Planes
   osac-aap                         Ansible playbooks for infrastructure provisioning
   osac-installer                   Helm charts, deploys all components to OpenShift
   bare-metal-fulfillment-operator  Kubernetes operator for bare metal fulfillment
+  osac-csi-driver                  CSI storage driver, routes to vendor backends via storage tiers
 osac-test-infra                    E2E test playbooks against fulfillment-service gRPC API
 osac-ui                            Web console (React, PatternFly 6, pnpm workspace)
 enhancement-proposals              Design documents and RFCs

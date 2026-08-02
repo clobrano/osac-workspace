@@ -104,7 +104,6 @@ REPOS=(
   "enhancement-proposals"
   "docs:osac-docs"
   "host-management-openstack"
-  "osac-csi-driver"
 )
 
 # Reference repos — cloned read-only from osac-project, no fork remote added.
@@ -127,6 +126,7 @@ MERGED_COMPONENTS=(
   "osac-aap"
   "osac-installer"
   "bare-metal-fulfillment-operator"
+  "osac-csi-driver"
 )
 LEGACY_REPOS_DIR=".legacy-repos"
 

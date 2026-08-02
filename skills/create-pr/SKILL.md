@@ -37,16 +37,17 @@ BRANCH=$(git branch --show-current)
 ### Mono-repo component detection
 
 `osac` is a mono-repo containing `fulfillment-service`, `osac-operator`,
-`osac-aap`, `osac-installer`, and `bare-metal-fulfillment-operator` as
-subdirectories — a single PR can touch more than one of them.
-When `$REPO_NAME` is `osac`, detect which subdirectories this branch actually
-touches instead of assuming a single component:
+`osac-aap`, `osac-installer`, `bare-metal-fulfillment-operator`, and
+`osac-csi-driver` as subdirectories — a single PR can touch more than one of
+them. When `$REPO_NAME` is `osac`, detect which subdirectories this branch
+actually touches instead of assuming a single component:
 
 ```bash
 # Keep the (fulfillment-service|osac-operator|osac-aap|osac-installer|
-# bare-metal-fulfillment-operator) list in sync with bootstrap.sh's
-# MERGED_COMPONENTS array and Step 3's File Classification table below if a
-# future component merges into osac or one of these splits out.
+# bare-metal-fulfillment-operator|osac-csi-driver) list in sync with
+# bootstrap.sh's MERGED_COMPONENTS array and Step 3's File Classification
+# table below if a future component merges into osac or one of these splits
+# out.
 if [[ "$REPO_NAME" == "osac" ]]; then
   # Split the diff and the filter into two steps: a `git diff` failure must
   # still propagate under `set -e`/`pipefail`, but "no merged-component
@@ -55,7 +56,7 @@ if [[ "$REPO_NAME" == "osac" ]]; then
   # would otherwise mask a genuine `git diff` failure too).
   CHANGED_PATHS=$(git diff main..HEAD --name-only)
   TOUCHED_COMPONENTS=$(printf '%s\n' "$CHANGED_PATHS" \
-    | awk -F/ '$1 ~ /^(fulfillment-service|osac-operator|osac-aap|osac-installer|bare-metal-fulfillment-operator)$/ { print $1 }' \
+    | awk -F/ '$1 ~ /^(fulfillment-service|osac-operator|osac-aap|osac-installer|bare-metal-fulfillment-operator|osac-csi-driver)$/ { print $1 }' \
     | sort -u)
 else
   TOUCHED_COMPONENTS="$REPO_NAME"
@@ -65,7 +66,7 @@ fi
 `$TOUCHED_COMPONENTS` may list zero, one, or multiple names. Use it in Steps 2
 and 3 to select which per-component block(s) apply — run every matching block,
 not just the first. If it's empty because the change is purely doc/config
-outside all five subdirectories (e.g. `osac/README.md`), skip the
+outside all six subdirectories (e.g. `osac/README.md`), skip the
 component-specific parts of Steps 2 and 3. If it's empty but the change
 touches root-level files that affect multiple components' builds (e.g.
 `osac/go.work`, a root `Makefile`, `.github/workflows/`), don't skip
@@ -115,7 +116,6 @@ uv run ansible-lint
 
 ```bash
 cd "$REPO_DIR/osac-installer"
-git submodule update --init --recursive
 helm dependency build charts/osac/
 helm lint charts/osac-operators/
 helm lint charts/osac-prereqs/
@@ -143,8 +143,7 @@ If the change touches `values/*/values.yaml` image tags directly, also run:
 scripts/sync-image-tags.sh
 ```
 
-`--fix` auto-corrects drift against `osac`'s current commit SHA. Requires submodules
-to be initialized (`git submodule update --init --recursive`).
+`--fix` auto-corrects drift against `osac`'s current commit SHA.
 
 ### bare-metal-fulfillment-operator
 
@@ -156,6 +155,19 @@ make build
 make test
 make manifests generate && git diff --exit-code
 ```
+
+### osac-csi-driver
+
+```bash
+cd "$REPO_DIR/osac-csi-driver"
+make fmt && git diff --exit-code
+make lint
+make build
+make test
+```
+
+No CRDs, so no `make manifests`/`generate` step (unlike `osac-operator` and
+`bare-metal-fulfillment-operator`).
 
 ### Other repos
 
@@ -188,6 +200,7 @@ below already carry the mono-repo subdirectory prefix):
 | **osac-aap** | `osac-aap/collections/ansible_collections/osac/**/roles/**/tasks/*.yml`, `osac-aap/collections/ansible_collections/osac/**/plugins/**/*.py` | `osac-aap/tests/unit/**`, `osac-aap/tests/integration/targets/**` | `osac-aap/collections/ansible_collections/osac/**/meta/`, `osac-aap/docs/` |
 | **osac-installer** | Skip this check entirely — Helm charts/values, no unit-testable production/test file split | — | — |
 | **bare-metal-fulfillment-operator** | `bare-metal-fulfillment-operator/**/*.go` not `_test.go` | `bare-metal-fulfillment-operator/**/*_test.go` | `bare-metal-fulfillment-operator/api/v1alpha1/zz_generated*`, `bare-metal-fulfillment-operator/config/` |
+| **osac-csi-driver** | `osac-csi-driver/**/*.go` not `_test.go` | `osac-csi-driver/**/*_test.go` | None — no generated code |
 
 For each production file in the diff, check if a corresponding test file also appears in the diff. Matching rules:
 
@@ -244,10 +257,11 @@ If none, omit the prefix — just use a descriptive title.
 
 ## Step 6: Create PR
 
-`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`, and
-`bare-metal-fulfillment-operator` share one `origin`/`fork` pair — the `osac`
-mono-repo — so this step creates a single PR covering every component touched
-in `$TOUCHED_COMPONENTS`, not one PR per component.
+`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`,
+`bare-metal-fulfillment-operator`, and `osac-csi-driver` share one
+`origin`/`fork` pair — the `osac` mono-repo — so this step creates a single PR
+covering every component touched in `$TOUCHED_COMPONENTS`, not one PR per
+component.
 
 Determine the upstream repo from the `origin` remote:
 

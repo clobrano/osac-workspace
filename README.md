@@ -48,12 +48,13 @@ Use `--no-fork` if you only need read-only access or are running in CI. To overr
 
 | Component | Description |
 |-----------|-------------|
-| [osac](https://github.com/osac-project/osac) | Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator (see subdirectories below) |
+| [osac](https://github.com/osac-project/osac) | Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator + osac-csi-driver (see subdirectories below) |
 | `osac/fulfillment-service` | gRPC/REST API server with PostgreSQL backend — manages VirtualNetworks, Subnets, SecurityGroups, ComputeInstances |
 | `osac/osac-operator` | Kubernetes operator for deploying OpenShift clusters via Hosted Control Planes |
 | `osac/osac-aap` | Ansible Automation Platform roles and playbooks for VM and network provisioning |
 | `osac/osac-installer` | Installation manifests, prerequisites, and demo scripts |
 | `osac/bare-metal-fulfillment-operator` | Kubernetes operator for bare metal fulfillment |
+| `osac/osac-csi-driver` | CSI storage driver, routes to vendor backends via fulfillment-service storage tiers |
 | [osac-test-infra](https://github.com/osac-project/osac-test-infra) | Integration testing infrastructure |
 | [osac-ui](https://github.com/osac-project/osac-ui) | OSAC UI web console for managing cloud resources |
 | [enhancement-proposals](https://github.com/osac-project/enhancement-proposals) | Design documents and enhancement proposals |
