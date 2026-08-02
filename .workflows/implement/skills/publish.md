@@ -100,7 +100,8 @@ git add {fixed files}
 ```
 
 ```bash
-git commit -m "{issue-key}: address cross-cutting review findings"
+git commit -s -m "{issue-key}: address cross-cutting review findings" \
+  --trailer "Assisted-by: Claude Code <noreply@anthropic.com>"
 ```
 
 ### Step 3: Pre-Flight Review Gate (Security + Performance)
@@ -139,6 +140,19 @@ git log --oneline {local-base}..HEAD
 Confirm with the user before proceeding.
 
 ### Step 5: Push Branch
+
+Check the **Repository Topology** section of `01-context.md` to determine
+whether this is a fork-based workflow — OSAC's own convention is fork-based
+(`origin` is the read-only upstream, `fork` is the push target; never push
+to `origin`), but keep this conditional for parity with Step 7 below.
+
+**If the repo is a fork:**
+
+```bash
+git push -u fork {branch-name}
+```
+
+**If the repo is a direct clone** (not a fork):
 
 ```bash
 git push -u origin {branch-name}

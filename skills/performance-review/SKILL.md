@@ -15,6 +15,12 @@ is `security-review`); both are called in order by the `review-gate` skill,
 with this one running **first**. It's also independently invocable — run it
 any time you want a performance pass without going through the full gate.
 
+**Severity contract:** tag every finding `CRITICAL`, `IMPORTANT`, or
+`ADVISORY` — full definitions are in the Severity section below.
+`CRITICAL`/`IMPORTANT` block; `ADVISORY` doesn't. This is a shared
+vocabulary with `security-review` and `review-gate`'s PASS/BLOCKED logic,
+not a local convention — see the Severity Vocabulary in `review-gate`.
+
 ## When to run
 
 After the implementation feels done, before `git commit` or `gh pr create` —
@@ -29,22 +35,29 @@ below is a starting point for that pass, not a substitute for it.
 
 ## Scope
 
-Review **`git diff main`** — everything different from `main` on this
-branch, whether committed, staged, or unstaged — not the full repo. Pull in
-enough surrounding context to judge real cost: is the changed function on a
-request path, a reconcile loop, or a one-time init? A O(n^2) loop in a CLI's
-one-shot startup code is not the same severity as one in a hot gRPC handler
-or a controller's `Reconcile()`.
+Review **`git diff main` plus any untracked files** — everything different
+from `main` on this branch, whether committed, staged, unstaged, or never
+staged at all — not the full repo. Pull in enough surrounding context to
+judge real cost: is the changed function on a request path, a reconcile
+loop, or a one-time init? A O(n^2) loop in a CLI's one-shot startup code is
+not the same severity as one in a hot gRPC handler or a controller's
+`Reconcile()`.
 
 ```bash
 git diff main --name-only
 git diff main
+git ls-files --others --exclude-standard
 ```
 
-If this is empty, say so and stop — there's nothing to review yet.
+`git diff` alone misses untracked files — a brand-new file that's never
+been `git add`-ed produces no diff output. If `git ls-files --others
+--exclude-standard` lists anything, read each file in full and review it
+exactly as if it were an added file in the diff.
 
-**If invoked via the `review-gate` skill**, review whatever diff it hands
-you instead of deriving your own — `review-gate` captures the diff once and
+If both are empty, say so and stop — there's nothing to review yet.
+
+**If invoked via the `review-gate` skill**, review whatever scope it hands
+you instead of deriving your own — `review-gate` captures scope once and
 passes it to both reviewers so they agree on exactly what's in scope.
 
 ## What to check
