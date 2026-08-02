@@ -167,8 +167,8 @@ git worktree remove ../osac-workspace-storage-qos
 ```bash
 # Build and test fulfillment-service
 cd osac/fulfillment-service
-go build
-ginkgo run -r
+go build ./...
+ginkgo run -r internal
 
 # Test API against a running cluster
 export KUBECONFIG=./kubeconfig

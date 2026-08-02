@@ -116,14 +116,15 @@ elif command -v gh &>/dev/null && gh auth status &>/dev/null; then
   # sandboxed environment).
   #
   # osac-operator was merged into the osac-project/osac mono-repo
-  # (OSAC-1739); the mono-repo hasn't cut its first tag yet as of this
-  # writing, so this block will report "skip: couldn't resolve..." below
-  # until it does. That's the designed-for degraded path, not a bug -
-  # set SELF_CHECK_REPO/SELF_CHECK_TAG to a still-tagged repo (e.g. the
-  # old osac-project/osac-operator, while it remains un-archived) to get
-  # live coverage back in the meantime.
+  # (OSAC-1739). Tags there are now component-prefixed per OSAC-3467
+  # (e.g. fulfillment-service/vX.Y.Z, osac-operator/vX.Y.Z) rather than
+  # bare vX.Y.Z - if this starts reporting "skip: couldn't resolve..."
+  # again, the default tag below has likely been pruned/superseded;
+  # update it to whatever component tag currently exists on
+  # osac-project/osac (`gh api repos/osac-project/osac/tags`), or set
+  # SELF_CHECK_REPO/SELF_CHECK_TAG to point at another still-tagged repo.
   REPO="${SELF_CHECK_REPO:-osac-project/osac}"
-  TAG="${SELF_CHECK_TAG:-v0.0.1}"
+  TAG="${SELF_CHECK_TAG:-fulfillment-service/v0.0.81}"
   # Resolve the expected commit SHA the same way verify-tag-matches-sha.sh
   # does (peel annotated tags) rather than reading .object.sha directly -
   # for a lightweight tag that's already the commit SHA, but for an
