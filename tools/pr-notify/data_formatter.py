@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from models import ClassifiedPR, PRStatus
+from models import ClassifiedPR, DEFAULT_TITLE, PRStatus
 
 
 _REVIEWABLE_STATUSES = frozenset(
@@ -11,16 +11,19 @@ _REVIEWABLE_STATUSES = frozenset(
 
 
 def format_dashboard_data(
-    classified_prs: list[ClassifiedPR], repos: list[str]
+    classified_prs: list[ClassifiedPR],
+    repos: list[str],
+    title: str = DEFAULT_TITLE,
 ) -> dict:
     """Build a dict suitable for JSON serialization and dashboard rendering.
 
     Args:
         classified_prs: List of classified PRs from all repos.
         repos: Full list of monitored repo slugs (owner/name).
+        title: Dashboard title displayed in the HTML header.
 
     Returns:
-        Dict with keys: generated_at, summary, repos, ci_health.
+        Dict with keys: title, generated_at, summary, repos, ci_health.
     """
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -77,6 +80,7 @@ def format_dashboard_data(
         })
 
     return {
+        "title": title,
         "generated_at": now,
         "summary": summary,
         "repos": repo_data,

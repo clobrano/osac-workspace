@@ -80,12 +80,7 @@
   </header>
 
   <div class="section-title">Tools</div>
-  <div class="cards">
-    <a class="card" href="pr-dashboard/">
-      <h2>PR Dashboard</h2>
-      <p>Live view of open pull requests across all OSAC component repos, updated every 30 minutes.</p>
-    </a>
-  </div>
+  <div class="cards" id="tools-cards"><p style="color:#6a6e73">Loading dashboards...</p></div>
 
   <div class="section-title">Presentations</div>
   <div class="cards">
@@ -94,5 +89,36 @@
       <p>How OSAC uses Claude Code skills for the full development lifecycle: PRD, Design, Implementation, and E2E testing.</p>
     </a>
   </div>
+  <script>
+    fetch("dashboards.json")
+      .then(function(r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function(dashboards) {
+        var container = document.getElementById("tools-cards");
+        if (!dashboards.length) {
+          container.innerHTML = '<p style="color:#6a6e73">No dashboards configured.</p>';
+          return;
+        }
+        container.innerHTML = "";
+        dashboards.forEach(function(d) {
+          var a = document.createElement("a");
+          a.className = "card";
+          a.href = d.slug + "/";
+          var h2 = document.createElement("h2");
+          h2.textContent = d.title;
+          var p = document.createElement("p");
+          p.textContent = d.description;
+          a.appendChild(h2);
+          a.appendChild(p);
+          container.appendChild(a);
+        });
+      })
+      .catch(function() {
+        document.getElementById("tools-cards").innerHTML =
+          '<p style="color:#6a6e73">Could not load dashboards.</p>';
+      });
+  </script>
 </body>
 </html>

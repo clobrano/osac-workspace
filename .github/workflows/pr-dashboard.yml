@@ -32,20 +32,37 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Generate dashboard data
+      - name: Generate all dashboards
         working-directory: tools/pr-notify
         env:
           GH_TOKEN: ${{ secrets.OSAC_BOT_PAT }}
         run: |
-          python generate.py \
-            --config config.example.toml \
-            --output ../../docs/pr-dashboard/data.json
+          template_dir="../../docs/pr-dashboard"
+          for config in config*.example.toml; do
+            [ -f "$config" ] || continue
+            data_path=$(python generate.py --config "$config" --output /dev/null --print-data-path)
+            output="../../${data_path}"
+            outdir=$(dirname "$output")
+            mkdir -p "$outdir"
+            if [ "$(realpath "$outdir")" != "$(realpath "$template_dir")" ]; then
+              cp "$template_dir/index.html" "$outdir/"
+              cp "$template_dir/.nojekyll" "$outdir/" 2>/dev/null || true
+            fi
+            echo "::group::$config -> $data_path"
+            python generate.py --config "$config" --output "$output"
+            echo "::endgroup::"
+          done
 
       - name: Assemble site
         run: |
           mkdir -p _site/presentations
           cp index.html _site/
-          cp -r docs/pr-dashboard _site/pr-dashboard
+          for d in docs/*dashboard*/; do
+            [ -d "$d" ] || continue
+            cp -r "$d" "_site/$(basename "$d")"
+          done
+          cd tools/pr-notify && python generate_manifest.py --output ../../_site/dashboards.json
+          cd ../..
           cp presentations/*.html _site/presentations/
           cp -r presentations/assets _site/presentations/ 2>/dev/null || true
 

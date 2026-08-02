@@ -50,9 +50,24 @@ def load_config(path: str) -> Config:
             data_path=d.get("data_path", "docs/pr-dashboard/data.json"),
         )
 
+    raw_authors = data.get("filter_authors")
+    if raw_authors is None:
+        filter_authors = None
+    elif not isinstance(raw_authors, list) or not all(
+        isinstance(a, str) for a in raw_authors
+    ):
+        raise SystemExit(
+            f"Field 'filter_authors' must be an array of strings in config '{path}'"
+        )
+    else:
+        filter_authors = raw_authors
+
     return Config(
         repos=data["repos"],
         slack_channel=data.get("slack_channel"),
         slack_creds_dir=slack_creds_dir,
         dashboard=dashboard,
+        filter_authors=filter_authors,
+        title=data.get("title"),
+        description=data.get("description"),
     )
