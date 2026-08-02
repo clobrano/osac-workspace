@@ -1,13 +1,14 @@
 ---
 name: security-review
-description: Adversarial security review of staged changes before PR submission. Scans git diff --cached for RBAC/authz issues, injection, data exposure, permission-manifest widening, embedded secrets, prompt-injection patterns, and OSAC-specific policy violations (tenant isolation, multi-tenancy). Use standalone before staging is final, or via the review-gate skill as part of create-pr's pre-flight gate. Adapted from a production multi-agent review pipeline's security dimension.
+description: Adversarial security review of a branch's changes before PR submission. Scans git diff main (committed, staged, and unstaged) for RBAC/authz issues, injection, data exposure, permission-manifest widening, embedded secrets, prompt-injection patterns, and OSAC-specific policy violations (tenant isolation, multi-tenancy). Use standalone before opening a PR, or via the review-gate skill as part of create-pr's pre-flight gate. Adapted from a production multi-agent review pipeline's security dimension.
 allowed-tools: Read, Grep, Bash, Glob
 ---
 
 # Security Review
 
-Adversarial security review of **staged changes** — catches issues while they're
-still cheap to fix, before the change is pushed or exposed to reviewers/CI.
+Adversarial security review of a branch's changes — catches issues while
+they're still cheap to fix, before the change is pushed or exposed to
+reviewers/CI.
 
 This is one of two reviewers in OSAC's local pre-flight review gate (the other is
 `performance-review`); both are called in order by the `review-gate` skill, with
@@ -31,18 +32,23 @@ a substitute for it.
 
 ## Scope
 
-Review **staged changes only** — `git diff --cached` — not the full repo and
-not unstaged work-in-progress. Pull in enough surrounding context to evaluate
-the diff honestly: call sites, the auth/tenancy model it operates under, and
-any config, proto, or schema it touches. Don't limit yourself to the changed
-lines if the risk depends on how they're called.
+Review **`git diff main`** — everything different from `main` on this
+branch, whether committed, staged, or unstaged — not the full repo. Pull in
+enough surrounding context to evaluate the diff honestly: call sites, the
+auth/tenancy model it operates under, and any config, proto, or schema it
+touches. Don't limit yourself to the changed lines if the risk depends on
+how they're called.
 
 ```bash
-git diff --cached --name-only
-git diff --cached
+git diff main --name-only
+git diff main
 ```
 
-If nothing is staged, say so and stop — there's nothing to review yet.
+If this is empty, say so and stop — there's nothing to review yet.
+
+**If invoked via the `review-gate` skill**, review whatever diff it hands
+you instead of deriving your own — `review-gate` captures the diff once and
+passes it to both reviewers so they agree on exactly what's in scope.
 
 ## What to check
 
@@ -98,20 +104,26 @@ If nothing is staged, say so and stop — there's nothing to review yet.
   namespace predicate that other controllers of the same resource type
   enforce.
 
-## Severity and blocking
+## Severity
 
-Not every finding should block. Structural issues — authz/RBAC gaps,
-injection, privilege escalation, permission widening, real secrets, tenant
-isolation gaps, cross-tenant data leakage — **block**: fix before committing.
-Lower-stakes items (a suspicious-looking but benign string, a config default
-worth reconsidering) should be raised but don't need to gate the commit.
+Tag every finding with exactly one of these three labels — this is a shared
+contract with `performance-review` and `review-gate`'s PASS/BLOCKED logic,
+not a local convention. No synonyms (not "blocking", not "high").
+
+- **`CRITICAL`** — real secrets, injection, auth/authz bypass, confirmed
+  privilege escalation, confirmed tenant-isolation or cross-tenant data
+  leakage. Blocks.
+- **`IMPORTANT`** — authz/RBAC gaps, permission widening, a pattern that's
+  suspicious but needs more context to be certain it's exploitable. Blocks.
+- **`ADVISORY`** — a suspicious-looking but benign string, a config default
+  worth reconsidering. Raise it, don't gate on it.
 
 ## Output
 
 Produce a short structured list:
 
-```
-[severity] file:line — one-line description — suggested fix
+```text
+[CRITICAL|IMPORTANT|ADVISORY] file:line — one-line description — suggested fix
 ```
 
 If you find nothing, say so explicitly ("security review: no findings") — a

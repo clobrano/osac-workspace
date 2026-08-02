@@ -132,17 +132,26 @@ This is a warning — proceeding with PR creation.
 
 ## Step 4: Pre-Flight Review Gate
 
-Run the `review-gate` skill against staged changes. This is the last local
-check before anything leaves the machine — it runs after validation (Step 2)
-and the coverage advisory (Step 3), since either of those can still prompt
-more edits, and right before push (Step 5).
+Run the `review-gate` skill: read `../review-gate/SKILL.md` with the `Read`
+tool and follow it exactly, as if it were pasted inline here — don't rely on
+memory of what it does, even if you've run it earlier in this session. If
+your harness offers a dedicated skill-invocation mechanism (e.g. Claude
+Code's `Skill` tool), using that is fine too; either way, treat this step as
+a fresh execution of `review-gate`'s current instructions, not a recall of a
+prior result.
 
-Before invoking it, stage the changes it should review if they aren't already
-(`git add`) — `review-gate` only looks at `git diff --cached`.
+This is the last local check before anything leaves the machine — it runs
+after validation (Step 2) and the coverage advisory (Step 3), since either
+of those can still prompt more edits, and right before push (Step 5).
+
+By this point the working tree is already clean and everything is committed
+(Step 1's gate check requires that). `review-gate` always reviews
+`git diff main`, which at this point is identical to `git diff main..HEAD` —
+the actual commits about to be pushed. Nothing to stage here.
 
 **If the gate reports BLOCKED:** Stop. Show the full aggregated report from
-`review-gate`. Do not push. Fix the flagged issues, re-stage, and re-run this
-step.
+`review-gate`. Do not push. Fix the flagged issues (a new commit, or amend),
+and re-run this step.
 
 **If the gate reports PASS:** Continue to Step 5.
 

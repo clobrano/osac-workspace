@@ -1,12 +1,12 @@
 ---
 name: performance-review
-description: Performance self-review of staged changes before PR submission. Scans git diff --cached for O(n)/O(n^2) hot-path issues, memory/goroutine leaks, and inefficient patterns across OSAC's Go services and Ansible/Python tooling. Use standalone before staging is final, or via the review-gate skill as part of create-pr's pre-flight gate.
+description: Performance self-review of a branch's changes before PR submission. Scans git diff main (committed, staged, and unstaged) for O(n)/O(n^2) hot-path issues, memory/goroutine leaks, and inefficient patterns across OSAC's Go services and Ansible/Python tooling. Use standalone before opening a PR, or via the review-gate skill as part of create-pr's pre-flight gate.
 allowed-tools: Read, Grep, Bash, Glob
 ---
 
 # Performance Review
 
-Performance self-review of **staged changes** — catches inefficiencies while
+Performance self-review of a branch's changes — catches inefficiencies while
 they're still cheap to fix, before the change is pushed or exposed to
 reviewers/CI.
 
@@ -29,18 +29,23 @@ below is a starting point for that pass, not a substitute for it.
 
 ## Scope
 
-Review **staged changes only** — `git diff --cached` — not the full repo and
-not unstaged work-in-progress. Pull in enough surrounding context to judge
-real cost: is the changed function on a request path, a reconcile loop, or a
-one-time init? A O(n^2) loop in a CLI's one-shot startup code is not the same
-severity as one in a hot gRPC handler or a controller's `Reconcile()`.
+Review **`git diff main`** — everything different from `main` on this
+branch, whether committed, staged, or unstaged — not the full repo. Pull in
+enough surrounding context to judge real cost: is the changed function on a
+request path, a reconcile loop, or a one-time init? A O(n^2) loop in a CLI's
+one-shot startup code is not the same severity as one in a hot gRPC handler
+or a controller's `Reconcile()`.
 
 ```bash
-git diff --cached --name-only
-git diff --cached
+git diff main --name-only
+git diff main
 ```
 
-If nothing is staged, say so and stop — there's nothing to review yet.
+If this is empty, say so and stop — there's nothing to review yet.
+
+**If invoked via the `review-gate` skill**, review whatever diff it hands
+you instead of deriving your own — `review-gate` captures the diff once and
+passes it to both reviewers so they agree on exactly what's in scope.
 
 ## What to check
 
@@ -88,21 +93,27 @@ If nothing is staged, say so and stop — there's nothing to review yet.
   session/module-scoped pytest fixture, when the setup is read-only and
   tenant-safe to share.
 
-## Severity and blocking
+## Severity
 
-Not every finding should block. Structural issues — O(n^2)+ on a hot path
-scaled by tenant/user input, goroutine/resource leaks, unbounded growth on
-attacker- or tenant-controlled input, lock-held-across-I/O — **block**: fix
-before committing. Lower-stakes items (a micro-optimization, a loop that's
-technically O(n^2) but bounded to a handful of items) should be raised but
-don't need to gate the commit.
+Tag every finding with exactly one of these three labels — this is a shared
+contract with `security-review` and `review-gate`'s PASS/BLOCKED logic, not
+a local convention. No synonyms (not "blocking", not "high").
+
+- **`CRITICAL`** — O(n^2)+ on a hot path scaled by tenant/user input,
+  confirmed goroutine/resource leaks, unbounded growth on attacker- or
+  tenant-controlled input, lock held across an I/O call. Blocks.
+- **`IMPORTANT`** — likely a real problem but lower-stakes or needs more
+  context to be certain (e.g., a query missing pagination that's fine today
+  but won't scale). Blocks.
+- **`ADVISORY`** — a micro-optimization, or a loop that's technically
+  O(n^2) but bounded to a handful of items. Raise it, don't gate on it.
 
 ## Output
 
 Produce a short structured list:
 
-```
-[severity] file:line — one-line description — suggested fix
+```text
+[CRITICAL|IMPORTANT|ADVISORY] file:line — one-line description — suggested fix
 ```
 
 If you find nothing, say so explicitly ("performance review: no findings") —
