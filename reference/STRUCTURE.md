@@ -47,6 +47,12 @@ osac-workspace/                        # Meta-workspace root
 
 ## Directory Purposes
 
+All component-relative paths below (e.g., `fulfillment-service/cmd`,
+`osac-operator/api/v1alpha1`) are relative to `osac/` — i.e.,
+`fulfillment-service/cmd` means `osac/fulfillment-service/cmd`.
+`osac-test-infra` and `enhancement-proposals` are genuinely separate
+top-level repos, not `osac/` subdirectories.
+
 **fulfillment-service/cmd:**
 - Purpose: Binary entry points for service, CLI, and dev tools
 - Contains: main.go files for `fulfillment-service`, `osac` (CLI), `osac-dev`, `buf-plugin-osac-lint`, and `test-server`

@@ -21,7 +21,13 @@ Determine which component repo you're in and gather branch state.
 
 ```bash
 REPO_DIR=$(git rev-parse --show-toplevel)
-REPO_NAME=$(basename "$REPO_DIR")
+# Derive from the origin remote, not $(basename "$REPO_DIR") -- a worktree's
+# directory name (e.g. ../osac-feature-branch, per cross-repo-workflow.md)
+# doesn't match the repo name, which would silently skip mono-repo component
+# detection below.
+REPO_NAME=$(git -C "$REPO_DIR" config --get remote.origin.url)
+REPO_NAME="${REPO_NAME##*/}"
+REPO_NAME="${REPO_NAME%.git}"
 BRANCH=$(git branch --show-current)
 ```
 
@@ -143,7 +149,9 @@ If the change touches `values/*/values.yaml` image tags directly, also run:
 scripts/sync-image-tags.sh
 ```
 
-`--fix` auto-corrects drift against `osac`'s current commit SHA.
+`--fix` auto-corrects drift against `osac`'s current commit SHA. Does not cover
+`osac-csi-driver`'s `csiDriver`/`csiBackends` tags yet — verify and update those
+manually if the change touches them.
 
 ### bare-metal-fulfillment-operator
 
