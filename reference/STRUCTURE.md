@@ -38,7 +38,6 @@ osac-workspace/                        # Meta-workspace root
 ├── osac-ui/                           # Web console (React, PatternFly 6)
 ├── osac-ux/                           # Read-only UI reference (React 19, PatternFly 6)
 ├── osac-docs/                         # Architecture docs and guides
-├── host-management-openstack/         # Bare metal host management via OpenStack
 ├── docs/                              # Additional documentation
 ├── enhancement-proposals/             # Design documents
 ├── CLAUDE.md                          # Project development guide

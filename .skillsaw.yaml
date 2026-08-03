@@ -402,7 +402,6 @@ exclude:
   - "osac-test-infra/**"
   - "osac-ui/**"
   - "enhancement-proposals/**"
-  - "host-management-openstack/**"
   - "osac-ux/**"
   - ".ai-workflows/**"
   # Workspace artifacts and generated content
