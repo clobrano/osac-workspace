@@ -137,13 +137,21 @@ default. Stories are often stacked on another story's branch rather than
 directly on `main`; reviewing against `main` in that case would pull in
 the earlier story's already-in-flight code too, flagging findings this
 branch didn't introduce and can't fix. With `BASE={local-base}`,
-`review-gate` reviews `git diff {local-base}` — the full delta between
-this branch and its actual parent, committed or not — so it automatically
-covers any fixes Step 2 just committed, with no extra wiring needed.
+`review-gate` diffs from `$(git merge-base {local-base} HEAD)` — the full
+delta between this branch and the point where it actually diverged from
+its parent, committed or not — so it automatically covers any fixes
+Step 2 just committed, with no extra wiring needed, and stays correct even
+if `{local-base}` itself has moved since this branch was cut.
 
 **If the gate reports BLOCKED:** Stop. Show the full aggregated report from
 `review-gate`. Do not push. Fix the flagged issues, commit them, and
 re-run this step.
+
+**If the gate reports INVALID:** Stop — treat this the same as BLOCKED for
+the purpose of not pushing. Show which reviewer's output failed validation
+and why. This means a reviewer step produced no usable output, not that
+the code has a confirmed problem — the next action is re-running this step
+(re-reading the failed reviewer's `SKILL.md` fresh), not editing code.
 
 **If the gate reports PASS:** Continue to Step 4.
 
@@ -167,10 +175,13 @@ Confirm with the user before proceeding.
 
 ### Step 5: Push Branch
 
-Check the **Repository Topology** section of `01-context.md` to determine
-whether this is a fork-based workflow — OSAC's own convention is fork-based
-(`origin` is the read-only upstream, `fork` is the push target; never push
-to `origin`), but keep this conditional for parity with Step 7 below.
+Check the **Repository Topology** section of `01-context.md` to confirm
+this is a fork-based workflow. AGENTS.md's fork-only policy is
+unconditional for OSAC — `origin` is always the read-only upstream, `fork`
+is always the push target, with no direct-clone exception. Unlike Step 7
+below (which only creates a PR and doesn't push), this step performs an
+actual push, so getting the remote wrong here means writing to a remote
+OSAC policy says never to write to.
 
 **If the repo is a fork:**
 
@@ -178,11 +189,13 @@ to `origin`), but keep this conditional for parity with Step 7 below.
 git push -u fork {branch-name}
 ```
 
-**If the repo is a direct clone** (not a fork):
-
-```bash
-git push -u origin {branch-name}
-```
+**If the repo is not a fork** (Repository Topology says direct clone, or
+the `fork` remote doesn't exist): **stop.** Do not fall back to
+`git push -u origin` — report to the user that the repository topology
+doesn't match OSAC's fork-based convention and ask them to confirm the
+correct remote before pushing anything. A misread or misconfigured
+topology should block the push, not silently redirect it to the one
+remote OSAC's own rules forbid pushing to.
 
 ### Step 6: Create PR Description
 

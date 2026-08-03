@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Adversarial security review of a branch's changes before PR submission. Scans git diff main (committed, staged, and unstaged) for RBAC/authz issues, injection, data exposure, permission-manifest widening, embedded secrets, prompt-injection patterns, and OSAC-specific policy violations (tenant isolation, multi-tenancy). Use standalone before opening a PR, or via the review-gate skill as part of create-pr's pre-flight gate. Adapted from a production multi-agent review pipeline's security dimension.
+description: Adversarial security review of a branch's changes before PR submission. Scans everything changed since diverging from main (committed, staged, and unstaged, via merge-base) for RBAC/authz issues, injection, data exposure, permission-manifest widening, embedded secrets, prompt-injection patterns, and OSAC-specific policy violations (tenant isolation, multi-tenancy). Use standalone before opening a PR, or via the review-gate skill as part of create-pr's pre-flight gate. Adapted from a production multi-agent review pipeline's security dimension.
 allowed-tools: Read, Grep, Bash, Glob
 ---
 
@@ -39,18 +39,25 @@ a substitute for it.
 
 ## Scope
 
-Review **`git diff main` plus any untracked files** — everything different
-from `main` on this branch, whether committed, staged, unstaged, or never
+Review **everything this branch has changed since diverging from `main`**,
+plus any untracked files — whether committed, staged, unstaged, or never
 staged at all — not the full repo. Pull in enough surrounding context to
 evaluate the diff honestly: call sites, the auth/tenancy model it operates
 under, and any config, proto, or schema it touches. Don't limit yourself to
 the changed lines if the risk depends on how they're called.
 
 ```bash
-git diff main --name-only
-git diff main
+MERGE_BASE=$(git merge-base main HEAD)
+git diff "$MERGE_BASE" --name-only
+git diff "$MERGE_BASE"
 git ls-files --others --exclude-standard
 ```
+
+Diff from the merge-base, not from `main` directly — `main` moves
+constantly, and a raw `git diff main` would pull in whatever `main` gained
+after this branch diverged, indistinguishable from changes this branch
+actually made. `git diff "$MERGE_BASE"` isolates exactly what this branch
+changed, regardless of `main`'s later history.
 
 `git diff` alone misses untracked files — a brand-new file that's never
 been `git add`-ed produces no diff output. A hardcoded secret in a file

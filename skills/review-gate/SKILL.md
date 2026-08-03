@@ -1,17 +1,19 @@
 ---
 name: review-gate
-description: Local pre-flight review gate that runs performance and security reviews against the full diff between the current branch and a base ref (main by default) before PR submission — covering committed, staged, and unstaged changes uniformly. Orchestrates the performance-review and security-review skills in sequence and aggregates their findings into one actionable report. Use standalone before opening a PR, or automatically as a step in create-pr or /implement:publish. Blocks on critical/important findings from either reviewer.
+description: Local pre-flight review gate that runs performance and security reviews against everything this branch has changed since diverging from a base ref (main by default, via merge-base — not a raw diff against the base's current tip) before PR submission, covering committed, staged, and unstaged changes uniformly. Orchestrates the performance-review and security-review skills in sequence and aggregates their findings into one actionable report. Use standalone before opening a PR, or automatically as a step in create-pr or /implement:publish. Blocks on critical/important findings from either reviewer.
 allowed-tools: Read, Grep, Bash, Glob
 ---
 
 # Pre-Flight Review Gate
 
 Runs OSAC's local review swarm — `performance-review` then `security-review`
-— against **`git diff {BASE}` plus any untracked files**: everything
-different from `{BASE}` on this branch, committed or not, staged or not, and
-even files never `git add`-ed at all. `{BASE}` is `main` by default — see
-Parameters. Uniform whether run standalone mid-work or invoked by
-`create-pr`/`implement:publish` right before push. See Step 1 for why.
+— against **the diff from where this branch last agreed with `{BASE}`**,
+plus any untracked files: everything this branch has changed since it
+diverged, committed or not, staged or not, and even files never `git add`-ed
+at all. `{BASE}` is `main` by default — see Parameters. Uniform whether run
+standalone mid-work or invoked by `create-pr`/`implement:publish` right
+before push. See Step 1 for why "since it diverged" and not just "diff
+against `{BASE}`" matters.
 
 This is the last local checkpoint before a change leaves the machine: run it
 standalone whenever you want a pre-flight pass, or let `create-pr` invoke it
@@ -32,7 +34,7 @@ after Step 3 has aggregated every reviewer's output.
 
 | Parameter | Required | Description | Default |
 |-----------|----------|-------------|---------|
-| `BASE` | No | The ref to diff against (`git diff {BASE}`) | `main` |
+| `BASE` | No | The ref this branch diverged from — scope is computed from `git merge-base {BASE} HEAD`, not a raw diff against `{BASE}`'s current tip (see Step 1) | `main` |
 
 Callers that stack branches (a story built on top of another, not directly
 on `main`) must pass their actual parent branch as `BASE` — see Step 1 for
@@ -42,11 +44,12 @@ default without saying anything. `/implement:publish`'s override passes
 
 ## Prerequisites
 
-- Something exists to review: `git diff {BASE} --name-only` is non-empty, or
-  there are untracked files (`git ls-files --others --exclude-standard` is
-  non-empty). If both are empty, stop and tell the user: "Nothing to
-  review — no difference from `{BASE}` (committed, staged, or unstaged) and
-  no untracked files, so there's nothing for the review gate to check."
+- Something exists to review: `git diff $(git merge-base {BASE} HEAD)
+  --name-only` is non-empty, or there are untracked files (`git ls-files
+  --others --exclude-standard` is non-empty). If both are empty, stop and
+  tell the user: "Nothing to review — no difference since this branch
+  diverged from `{BASE}` (committed, staged, or unstaged) and no untracked
+  files, so there's nothing for the review gate to check."
 
 ## Severity Vocabulary — the contract both reviewers use
 
@@ -65,14 +68,31 @@ free-text severity language — see Step 3.
 
 ## Step 1: Capture Scope
 
-Not the full repo — but two commands, not one, since neither alone is
-sufficient:
+Not the full repo — and not a raw diff against `{BASE}`'s current tip
+either. Three steps:
 
 ```bash
-git diff {BASE} --name-only
-git diff {BASE}
+MERGE_BASE=$(git merge-base {BASE} HEAD)
+git diff "$MERGE_BASE" --name-only
+git diff "$MERGE_BASE"
 git ls-files --others --exclude-standard
 ```
+
+**Diff from the merge-base, not from `{BASE}` directly — `{BASE}` can move
+out from under you.** `git diff {BASE}` is a raw tree-to-tree comparison
+against wherever `{BASE}` currently points. If `{BASE}` has gained commits
+since this branch diverged from it (normal for anything but a
+just-created branch — `main` moves constantly), that comparison pulls in
+`{BASE}`'s own subsequent changes too, indistinguishable from changes this
+branch actually made. Confirmed with a throwaway repro: `git diff main`
+showed a file that only existed because `main` had advanced, one this
+branch never touched, as a false deletion. `git diff
+$(git merge-base {BASE} HEAD)` — diffing from the commit where this branch
+and `{BASE}` last agreed — shows only what this branch actually changed,
+regardless of anything that happened on `{BASE}` afterward. `$MERGE_BASE`
+is a fixed commit, so this remains a plain single-ref diff against the
+working tree — it still naturally includes staged and unstaged changes,
+same as before.
 
 **`git diff` alone misses untracked files.** A file that's never been
 `git add`-ed produces no diff output at all — a brand-new file with a
@@ -81,30 +101,33 @@ against an empty scope, prerequisite check and all. If `git ls-files
 --others --exclude-standard` lists anything, read each file in full and
 include it in scope exactly as if it were an added file in the diff.
 
-The `git diff {BASE}` half is deliberately not `git diff --cached`. Two
-calling contexts, one command:
+Diffing from `$MERGE_BASE` is deliberately not `git diff --cached`. Two
+calling contexts, one mechanism:
 
-- **Standalone, mid-work** — `git diff {BASE}` picks up any prior commits on
-  the branch *and* whatever's staged/unstaged on top. Staged-only scope
-  would silently skip already-committed work if a developer commits, then
-  stages one more change before running this gate. This is also the case
-  where the untracked-file check above actually matters — a new file sitting
-  in the working tree, never staged, is exactly what `create-pr`'s own
-  clean-tree gate would catch but nothing has caught yet mid-work.
+- **Standalone, mid-work** — picks up any prior commits on the branch *and*
+  whatever's staged/unstaged on top, all the way back to where it diverged
+  from `{BASE}`. Staged-only scope would silently skip already-committed
+  work if a developer commits, then stages one more change before running
+  this gate. This is also the case where the untracked-file check above
+  actually matters — a new file sitting in the working tree, never staged,
+  is exactly what `create-pr`'s own clean-tree gate would catch but nothing
+  has caught yet mid-work.
 - **From `create-pr`** — by the time that skill reaches this gate, its own
   Step 1 already required a clean, fully-committed tree (`git status
   --porcelain` empty, which includes untracked files) *and* it reaches this
-  gate with nothing staged or unstaged. `git diff {BASE}` is identical to
-  `git diff {BASE}..HEAD` here, and the untracked-file check will always
-  come back empty — harmless to run, just redundant in this path
+  gate with nothing staged or unstaged. Diffing from `$MERGE_BASE` here
+  covers exactly the commits about to be pushed, whether or not `main` has
+  moved since the branch was created, and the untracked-file check will
+  always come back empty — harmless to run, just redundant in this path
   specifically.
 
 **Why `BASE` matters for stacked branches:** if this story is stacked on
-another (its actual parent isn't `main`), diffing against `main` would pull
-in the earlier story's code too — code this branch didn't write and can't
-fix, since it's not part of this diff in any meaningful sense. Diffing
-against the actual parent (`BASE` set to that branch) reviews only what
-this story actually adds.
+another (its actual parent isn't `main`), computing a merge-base against
+`main` would still land on the point where the *parent* branch diverged
+from `main` — including the parent's entire contents in the diff. That's
+code this branch didn't write and can't fix, since it's not part of this
+story in any meaningful sense. Setting `BASE` to the actual parent branch
+before computing the merge-base reviews only what this story itself adds.
 
 Capture this scope now — the diff plus any untracked file contents. Pass it
 explicitly to both reviewers in Step 2 — don't let them independently
@@ -131,11 +154,12 @@ current file is exactly how a stale gate check produces a plausible-looking
 but stale verdict.
 
 1. Read and follow `../performance-review/SKILL.md`, applying it to the
-   scope captured in Step 1 (`git diff {BASE}` plus any untracked files).
-   Its own Scope section defaults to `git diff main` plus untracked files —
-   when `BASE` is `main` (the common case) that's already the same thing,
-   but when a caller passed a different `BASE` (a stacked branch's parent),
-   say so explicitly and override its default. Capture its structured
+   exact scope captured in Step 1 (the diff from `$MERGE_BASE`, plus any
+   untracked files) — not whatever its own Scope section would derive on
+   its own. Its own default is similar in spirit (diff since diverging from
+   `main`) but was captured independently in a possibly-different moment or
+   against a possibly-different `BASE`; hand it the scope you already
+   captured rather than letting it re-derive one. Capture its structured
    findings — **regardless of what they are**, including blocking-severity
    ones.
 2. Read and follow `../security-review/SKILL.md` the same way, with the
@@ -184,7 +208,7 @@ Once both outputs validate, merge them into one, in this shape:
 ...
 (or: "security review: no findings")
 
-### Verdict: PASS / BLOCKED
+### Verdict: PASS / BLOCKED / INVALID
 ```
 
 - Dedup findings that land on the same file:line from both reviewers —

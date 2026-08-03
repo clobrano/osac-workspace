@@ -1,6 +1,6 @@
 ---
 name: performance-review
-description: Performance self-review of a branch's changes before PR submission. Scans git diff main (committed, staged, and unstaged) for O(n)/O(n^2) hot-path issues, memory/goroutine leaks, and inefficient patterns across OSAC's Go services and Ansible/Python tooling. Use standalone before opening a PR, or via the review-gate skill as part of create-pr's pre-flight gate.
+description: Performance self-review of a branch's changes before PR submission. Scans everything changed since diverging from main (committed, staged, and unstaged, via merge-base) for O(n)/O(n^2) hot-path issues, memory/goroutine leaks, and inefficient patterns across OSAC's Go services and Ansible/Python tooling. Use standalone before opening a PR, or via the review-gate skill as part of create-pr's pre-flight gate.
 allowed-tools: Read, Grep, Bash, Glob
 ---
 
@@ -35,8 +35,8 @@ below is a starting point for that pass, not a substitute for it.
 
 ## Scope
 
-Review **`git diff main` plus any untracked files** — everything different
-from `main` on this branch, whether committed, staged, unstaged, or never
+Review **everything this branch has changed since diverging from `main`**,
+plus any untracked files — whether committed, staged, unstaged, or never
 staged at all — not the full repo. Pull in enough surrounding context to
 judge real cost: is the changed function on a request path, a reconcile
 loop, or a one-time init? A O(n^2) loop in a CLI's one-shot startup code is
@@ -44,10 +44,17 @@ not the same severity as one in a hot gRPC handler or a controller's
 `Reconcile()`.
 
 ```bash
-git diff main --name-only
-git diff main
+MERGE_BASE=$(git merge-base main HEAD)
+git diff "$MERGE_BASE" --name-only
+git diff "$MERGE_BASE"
 git ls-files --others --exclude-standard
 ```
+
+Diff from the merge-base, not from `main` directly — `main` moves
+constantly, and a raw `git diff main` would pull in whatever `main` gained
+after this branch diverged, indistinguishable from changes this branch
+actually made. `git diff "$MERGE_BASE"` isolates exactly what this branch
+changed, regardless of `main`'s later history.
 
 `git diff` alone misses untracked files — a brand-new file that's never
 been `git add`-ed produces no diff output. If `git ls-files --others

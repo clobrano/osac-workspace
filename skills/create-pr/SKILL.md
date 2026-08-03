@@ -147,13 +147,20 @@ of those can still prompt more edits, and right before push (Step 5).
 By this point the working tree is already clean and everything is committed
 (Step 1's gate check requires that). `create-pr` doesn't stack branches, so
 use `review-gate`'s default `BASE` (`main`) — no override needed.
-`review-gate` reviews `git diff main`, which at this point is identical to
-`git diff main..HEAD` — the actual commits about to be pushed. Nothing to
-stage here.
+`review-gate` diffs from `$(git merge-base main HEAD)` — not a raw
+`git diff main` — so it reviews exactly the commits about to be pushed even
+if `main` has advanced since this branch was created. Nothing to stage
+here.
 
 **If the gate reports BLOCKED:** Stop. Show the full aggregated report from
 `review-gate`. Do not push. Fix the flagged issues in a new commit (never
 amend — see Red Flags) and re-run this step.
+
+**If the gate reports INVALID:** Stop — treat this the same as BLOCKED for
+the purpose of not pushing. Show which reviewer's output failed validation
+and why. This means a reviewer step produced no usable output, not that
+the code has a confirmed problem — the next action is re-running this step
+(re-reading the failed reviewer's `SKILL.md` fresh), not editing code.
 
 **If the gate reports PASS:** Continue to Step 5.
 
@@ -283,7 +290,7 @@ If a PR already exists, show its URL instead of creating a duplicate.
 - Push to `origin` — always use `fork`
 - Create a PR from `main`
 - Skip validation checks
-- Skip the pre-flight review gate, or push after it reports BLOCKED
+- Skip the pre-flight review gate, or push after it reports BLOCKED or INVALID
 - Force-push without user confirmation
 - Create a PR with failing tests
 - Amend an existing commit — always create a new one
