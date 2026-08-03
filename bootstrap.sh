@@ -122,7 +122,6 @@ REPOS=(
   "osac-ui"
   "enhancement-proposals"
   "docs:osac-docs"
-  "host-management-openstack"
 )
 
 # Reference repos — cloned read-only from osac-project, no fork remote added.

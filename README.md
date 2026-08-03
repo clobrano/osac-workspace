@@ -59,7 +59,6 @@ Use `--no-fork` if you only need read-only access or are running in CI. To overr
 | [osac-ui](https://github.com/osac-project/osac-ui) | OSAC UI web console for managing cloud resources |
 | [enhancement-proposals](https://github.com/osac-project/enhancement-proposals) | Design documents and enhancement proposals |
 | [docs](https://github.com/osac-project/docs)[^1] | Architecture documentation, diagrams, and design guides |
-| [host-management-openstack](https://github.com/osac-project/host-management-openstack) | Bare metal host management via OpenStack |
 
 [^1]: Cloned into a subdirectory as `osac-docs`
 
