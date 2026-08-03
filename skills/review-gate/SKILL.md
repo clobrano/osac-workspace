@@ -1,16 +1,17 @@
 ---
 name: review-gate
-description: Local pre-flight review gate that runs performance and security reviews against the full diff between the current branch and main (git diff main) before PR submission — covering committed, staged, and unstaged changes uniformly. Orchestrates the performance-review and security-review skills in sequence and aggregates their findings into one actionable report. Use standalone before opening a PR, or automatically as a step in create-pr. Blocks on critical/important findings from either reviewer.
+description: Local pre-flight review gate that runs performance and security reviews against the full diff between the current branch and a base ref (main by default) before PR submission — covering committed, staged, and unstaged changes uniformly. Orchestrates the performance-review and security-review skills in sequence and aggregates their findings into one actionable report. Use standalone before opening a PR, or automatically as a step in create-pr or /implement:publish. Blocks on critical/important findings from either reviewer.
 allowed-tools: Read, Grep, Bash, Glob
 ---
 
 # Pre-Flight Review Gate
 
 Runs OSAC's local review swarm — `performance-review` then `security-review`
-— against **`git diff main` plus any untracked files**: everything different
-from `main` on this branch, committed or not, staged or not, and even files
-never `git add`-ed at all. Uniform whether run standalone mid-work or invoked
-by `create-pr` right before push. See Step 1 for why.
+— against **`git diff {BASE}` plus any untracked files**: everything
+different from `{BASE}` on this branch, committed or not, staged or not, and
+even files never `git add`-ed at all. `{BASE}` is `main` by default — see
+Parameters. Uniform whether run standalone mid-work or invoked by
+`create-pr`/`implement:publish` right before push. See Step 1 for why.
 
 This is the last local checkpoint before a change leaves the machine: run it
 standalone whenever you want a pre-flight pass, or let `create-pr` invoke it
@@ -27,12 +28,24 @@ needs findings from *all* reviewers in one pass, not one round trip per
 reviewer. The only place a gate decision is allowed to happen is Step 4,
 after Step 3 has aggregated every reviewer's output.
 
+## Parameters
+
+| Parameter | Required | Description | Default |
+|-----------|----------|-------------|---------|
+| `BASE` | No | The ref to diff against (`git diff {BASE}`) | `main` |
+
+Callers that stack branches (a story built on top of another, not directly
+on `main`) must pass their actual parent branch as `BASE` — see Step 1 for
+why `main` would be wrong there. `create-pr` never stacks, so it uses the
+default without saying anything. `/implement:publish`'s override passes
+`{local-base}` explicitly.
+
 ## Prerequisites
 
-- Something exists to review: `git diff main --name-only` is non-empty, or
+- Something exists to review: `git diff {BASE} --name-only` is non-empty, or
   there are untracked files (`git ls-files --others --exclude-standard` is
   non-empty). If both are empty, stop and tell the user: "Nothing to
-  review — no difference from `main` (committed, staged, or unstaged) and
+  review — no difference from `{BASE}` (committed, staged, or unstaged) and
   no untracked files, so there's nothing for the review gate to check."
 
 ## Severity Vocabulary — the contract both reviewers use
@@ -56,8 +69,8 @@ Not the full repo — but two commands, not one, since neither alone is
 sufficient:
 
 ```bash
-git diff main --name-only
-git diff main
+git diff {BASE} --name-only
+git diff {BASE}
 git ls-files --others --exclude-standard
 ```
 
@@ -68,10 +81,10 @@ against an empty scope, prerequisite check and all. If `git ls-files
 --others --exclude-standard` lists anything, read each file in full and
 include it in scope exactly as if it were an added file in the diff.
 
-The `git diff main` half is deliberately not `git diff --cached`. Two
+The `git diff {BASE}` half is deliberately not `git diff --cached`. Two
 calling contexts, one command:
 
-- **Standalone, mid-work** — `git diff main` picks up any prior commits on
+- **Standalone, mid-work** — `git diff {BASE}` picks up any prior commits on
   the branch *and* whatever's staged/unstaged on top. Staged-only scope
   would silently skip already-committed work if a developer commits, then
   stages one more change before running this gate. This is also the case
@@ -81,9 +94,17 @@ calling contexts, one command:
 - **From `create-pr`** — by the time that skill reaches this gate, its own
   Step 1 already required a clean, fully-committed tree (`git status
   --porcelain` empty, which includes untracked files) *and* it reaches this
-  gate with nothing staged or unstaged. `git diff main` is identical to
-  `git diff main..HEAD` here, and the untracked-file check will always come
-  back empty — harmless to run, just redundant in this path specifically.
+  gate with nothing staged or unstaged. `git diff {BASE}` is identical to
+  `git diff {BASE}..HEAD` here, and the untracked-file check will always
+  come back empty — harmless to run, just redundant in this path
+  specifically.
+
+**Why `BASE` matters for stacked branches:** if this story is stacked on
+another (its actual parent isn't `main`), diffing against `main` would pull
+in the earlier story's code too — code this branch didn't write and can't
+fix, since it's not part of this diff in any meaningful sense. Diffing
+against the actual parent (`BASE` set to that branch) reviews only what
+this story actually adds.
 
 Capture this scope now — the diff plus any untracked file contents. Pass it
 explicitly to both reviewers in Step 2 — don't let them independently
@@ -110,10 +131,13 @@ current file is exactly how a stale gate check produces a plausible-looking
 but stale verdict.
 
 1. Read and follow `../performance-review/SKILL.md`, applying it to the
-   scope captured in Step 1 (`git diff main` plus any untracked files)
-   instead of the `git diff --cached` its own Scope section defaults to —
-   override that explicitly. Capture its structured findings —
-   **regardless of what they are**, including blocking-severity ones.
+   scope captured in Step 1 (`git diff {BASE}` plus any untracked files).
+   Its own Scope section defaults to `git diff main` plus untracked files —
+   when `BASE` is `main` (the common case) that's already the same thing,
+   but when a caller passed a different `BASE` (a stacked branch's parent),
+   say so explicitly and override its default. Capture its structured
+   findings — **regardless of what they are**, including blocking-severity
+   ones.
 2. Read and follow `../security-review/SKILL.md` the same way, with the
    same explicit scope override. Run this unconditionally, even if step 1
    already found blocking issues — do not treat step 1's findings as a
@@ -183,8 +207,8 @@ reviewers in Step 2 have completed and Step 3 has aggregated their output.
 - **BLOCKED** — both reviewer outputs validated, and at least one
   `CRITICAL` or `IMPORTANT` finding exists. Stop. Show the full aggregated
   report. Do not proceed to push or PR creation. The only next action is
-  fixing the flagged issues (in the working tree, staged, or via a
-  new/amended commit — whichever applies) and re-running this gate.
+  fixing the flagged issues (in the working tree, staged, or via a new
+  commit — never amend an existing one) and re-running this gate.
 - **INVALID** — Step 3's validation failed for either reviewer (missing,
   empty, or malformed output). Stop. This is not the same as PASS or
   BLOCKED — treat it exactly like BLOCKED for the purpose of not

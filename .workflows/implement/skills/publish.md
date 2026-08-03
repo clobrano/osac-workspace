@@ -116,9 +116,15 @@ root) and follow it exactly, as if it were pasted inline here. Don't rely
 on memory of what it does, even if you've run it earlier in this session —
 treat this as a fresh execution of its current instructions.
 
-`review-gate` reviews `git diff main` — the full delta between this branch
-and `main`, committed or not — so it automatically covers any fixes Step 2
-just committed, with no extra wiring needed.
+Pass `{local-base}` (the same value Step 2 just used, from `02-plan.md`'s
+Branch section) as `review-gate`'s `BASE` parameter — **not** its `main`
+default. Stories are often stacked on another story's branch rather than
+directly on `main`; reviewing against `main` in that case would pull in
+the earlier story's already-in-flight code too, flagging findings this
+branch didn't introduce and can't fix. With `BASE={local-base}`,
+`review-gate` reviews `git diff {local-base}` — the full delta between
+this branch and its actual parent, committed or not — so it automatically
+covers any fixes Step 2 just committed, with no extra wiring needed.
 
 **If the gate reports BLOCKED:** Stop. Show the full aggregated report from
 `review-gate`. Do not push. Fix the flagged issues, commit them, and

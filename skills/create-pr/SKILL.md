@@ -145,13 +145,15 @@ after validation (Step 2) and the coverage advisory (Step 3), since either
 of those can still prompt more edits, and right before push (Step 5).
 
 By this point the working tree is already clean and everything is committed
-(Step 1's gate check requires that). `review-gate` always reviews
-`git diff main`, which at this point is identical to `git diff main..HEAD` —
-the actual commits about to be pushed. Nothing to stage here.
+(Step 1's gate check requires that). `create-pr` doesn't stack branches, so
+use `review-gate`'s default `BASE` (`main`) — no override needed.
+`review-gate` reviews `git diff main`, which at this point is identical to
+`git diff main..HEAD` — the actual commits about to be pushed. Nothing to
+stage here.
 
 **If the gate reports BLOCKED:** Stop. Show the full aggregated report from
-`review-gate`. Do not push. Fix the flagged issues (a new commit, or amend),
-and re-run this step.
+`review-gate`. Do not push. Fix the flagged issues in a new commit (never
+amend — see Red Flags) and re-run this step.
 
 **If the gate reports PASS:** Continue to Step 5.
 
@@ -284,6 +286,7 @@ If a PR already exists, show its URL instead of creating a duplicate.
 - Skip the pre-flight review gate, or push after it reports BLOCKED
 - Force-push without user confirmation
 - Create a PR with failing tests
+- Amend an existing commit — always create a new one
 
 **Always:**
 - Run repo-specific validation first
