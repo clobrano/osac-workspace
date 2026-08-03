@@ -394,6 +394,7 @@ exclude:
   - "osac-aap/**"
   - "osac-installer/**"
   - "bare-metal-fulfillment-operator/**"
+  - "osac-csi-driver/**"
   # Quarantined old standalone clones of components merged into osac (see
   # bootstrap.sh's MERGED_COMPONENTS/quarantine_merged_component and .gitignore)
   - ".legacy-repos/**"

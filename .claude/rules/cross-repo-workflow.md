@@ -11,6 +11,7 @@ Each component repo has its own CLAUDE.md. **Always read it before making change
 | `osac/osac-aap/CLAUDE.md` | Ansible roles, infrastructure provisioning |
 | `osac/osac-installer/CLAUDE.md` | Installation manifests, Helm charts, prerequisites |
 | `osac/bare-metal-fulfillment-operator/CLAUDE.md` | Bare-metal fulfillment operator |
+| `osac/osac-csi-driver/CLAUDE.md` | CSI storage driver (no `CLAUDE.md` yet — see its `README.md`) |
 | `osac-test-infra/CLAUDE.md` | E2E tests, pytest fixtures, gRPC/K8s clients |
 | `osac-ui/CLAUDE.md` | Web console, React, PatternFly 6 |
 
@@ -18,10 +19,10 @@ Each component repo has its own CLAUDE.md. **Always read it before making change
 
 **Use worktrees for**: multi-commit features, long-running branches, parallel work, PR isolation.
 
-`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`, and
-`bare-metal-fulfillment-operator` are subdirectories of one `osac/` mono-repo, so a
-single worktree covers all five — this is what makes a cross-component
-change land as one branch/one PR instead of several:
+`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`,
+`bare-metal-fulfillment-operator`, and `osac-csi-driver` are subdirectories of one
+`osac/` mono-repo, so a single worktree covers all six — this is what makes a
+cross-component change land as one branch/one PR instead of several:
 
 ```bash
 cd osac
@@ -35,10 +36,10 @@ git worktree remove ../osac-feature-branch
 
 ## Cross-Component Changes
 
-`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`, and
-`bare-metal-fulfillment-operator` live in one mono-repo (`osac/`) — a feature spanning
-any of them is a single branch and PR there. When a feature also spans a
-genuinely separate repo (e.g., `osac` + `osac-test-infra`):
+`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`,
+`bare-metal-fulfillment-operator`, and `osac-csi-driver` live in one mono-repo
+(`osac/`) — a feature spanning any of them is a single branch and PR there. When
+a feature also spans a genuinely separate repo (e.g., `osac` + `osac-test-infra`):
 
 1. Plan dependency order (which repo lands first?)
 2. Create branches with consistent names (e.g., `feature/add-storage-api`)

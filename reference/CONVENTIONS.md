@@ -196,7 +196,7 @@ When changing one repo, check all dependent repos in this table before submittin
 | `osac-operator` CRD types | `fulfillment-service` reconciler registration | New CRD types must be registered in the fulfillment-service reconciler (in-repo change, same PR) |
 | `osac-operator` CRD spec changes | `osac-aap` roles that read CRD fields | Adding a field to `ClusterOrderSpec` requires the AAP playbook to extract and use it |
 | `fulfillment-service` CLI flag changes | `osac-test-infra` test helpers | Adding `--pull-secret-file` required updating `OsacCLI.create_cluster` in the test infra (separate repo, separate PR) |
-| `osac-csi-driver` (the one remaining git submodule, under `osac/osac-installer/base/`) | `make sync-charts` in `osac-installer` | Bump via `git submodule update --remote`, then rebuild chart dependencies with `make sync-charts` |
+| `osac-csi-driver` source (any change that bumps its image) | `osac-installer`'s values files, by hand | Also an in-repo component now (no git submodules remain anywhere in `osac`), but `sync-image-tags.sh` doesn't cover its image tag yet — bump the `csiDriver`/`csiBackends` image tags in the values files manually until that script is updated |
 
 Evidence: MGMT-24226 eval scored 3/5 because the agent fixed `fulfillment-service` and `osac-aap` but missed updating `osac-installer`'s pinned image version — this was pre-mono-repo-merge (OSAC-1739), when these were still separate repos; the underlying failure mode (forgetting to re-sync image tags after a component change) persists today via `sync-image-tags.sh`.
 

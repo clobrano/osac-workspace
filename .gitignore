@@ -58,7 +58,6 @@ __pycache__/
 
 # Bootstrap-managed repositories (cloned by bootstrap.sh)
 osac/
-osac-csi-driver/
 osac-docs/
 osac-test-infra/
 osac-ui/
@@ -75,6 +74,7 @@ osac-operator/
 osac-aap/
 osac-installer/
 bare-metal-fulfillment-operator/
+osac-csi-driver/
 
 # Bootstrap-managed reference repos (cloned read-only, no fork remote)
 osac-ux/
