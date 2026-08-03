@@ -3,7 +3,15 @@
 Extracted from the merged unified networking designs.
 Read this file during planning, implementation, and review of OSAC networking-related work.
 For full designs, see `enhancement-proposals/enhancements/` — search for networking-related
-directories (OSAC-1433, OSAC-1435, OSAC-1436, OSAC-1437, dns-api).
+directories (OSAC-1433, OSAC-1435, OSAC-1436, OSAC-1437, dns-api). Before finalizing PRD or
+design scope for a feature that adds IP, MAC, or network-attachment data to any resource, check
+whether one of these already-accepted designs commits to delivering that same field — the
+decisions below establish the general mechanism (e.g., DHCP-based IP assignment via decision 10),
+not whether a specific field already exists in an accepted design elsewhere. If the new ticket is
+unrelated to that design and happens to overlap with it, exclude the overlapping scope and cite
+the existing design instead of redelivering it. If the new ticket is itself an intentional
+revision or extension of that design, say so explicitly (name it as superseding/extending that
+design) rather than treating the overlap as a conflict to avoid.
 
 ## Key design decisions
 

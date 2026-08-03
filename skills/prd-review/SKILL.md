@@ -64,6 +64,16 @@ A design document (enhancement proposal) describes HOW — architecture,
 controllers, API fields, playbooks. PRDs should be written from the perspective
 of a Product Manager, not an engineer.
 
+### Persona Review Gate
+
+Two persona checks apply below (criterion 1's Scoring, criterion 4's "Flag
+regardless of score"): missed or false consolidation between closely-related
+personas is an Important finding, not a WHAT deduction, as long as every
+canonical persona is still covered; a story heading for a non-canonical
+persona (most commonly an internal OSAC service) is a Suggestion unless it
+displaces a required persona's story. Full rules and examples under
+criterion 1.
+
 ### Criteria (0-2 each, /10 total)
 
 Score each criterion independently. For each, first state your reasoning,
@@ -117,6 +127,27 @@ persona sees only their own usage and the other sees the whole
 organization's), treat the persona whose real need differs as
 uncovered — a shared heading does not exempt the PRD from describing
 what each named persona can actually do.
+
+Equally, check the reverse failure: separate headings for closely-related
+personas that should have been merged. If two persona-specific stories
+differ only in the persona name and cosmetic wording — not in a
+constraint, scope, or outcome actually stated in the source material —
+this is a missed consolidation (apply the swap test from
+`enhancement-proposals/guidelines/prd_guide.md`'s "Duplicated persona
+stories" entry). Weigh this with particular scrutiny
+for Cloud Provider Admin and Cloud Infrastructure Admin, whose canonical
+roles already overlap heavily. Report as an Important finding (see
+Right-Sized's "Flag regardless of score") rather than a WHAT deduction —
+both personas are still covered, so WHAT itself isn't unclear.
+
+A story heading that names something other than one of the four canonical
+personas — most commonly an internal OSAC service (CaaS, BMaaS, VMaaS,
+MaaS, Enclave) given its own "persona" story — does not count toward
+persona coverage; see `enhancement-proposals/guidelines/prd_guide.md`'s
+"Inventing a persona for an internal service" entry. Report as a
+Suggestion unless it displaces or
+crowds out a required persona's actual story, in which case treat that
+persona as uncovered under the scoring below.
 
 - 0 = Vague, unclear, or describes system internals rather than user outcomes. No personas or services identified, or no per-persona user stories.
 - 1 = Ambiguous — need is partially clear but mixed with implementation, missing specifics, or missing affected personas. Or: user stories exist but some affected personas lack stories.

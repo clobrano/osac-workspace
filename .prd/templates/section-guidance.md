@@ -26,9 +26,9 @@ These apply across all sections:
 - Every claim should be traceable to the source requirements or
   clarification answers. Use standardized source markers for
   traceability:
-  - `[Jira: OSAC-3254]` — from the Jira issue description or acceptance
+  - `[Jira: OSAC-NNNN]` — from the Jira issue description or acceptance
     criteria
-  - `[Jira: OSAC-3254, comment by @user]` — from a specific Jira comment
+  - `[Jira: OSAC-NNNN, comment by @user]` — from a specific Jira comment
   - `[Clarify: R1.Q3]` — from clarification round 1, question 3 (matches
     `R1.Q3` headings in `02-clarifications.md`)
   - `[User]` — from direct user instruction during the workflow
@@ -43,6 +43,13 @@ These apply across all sections:
     reference.
   - Reserve inline markers for clarification-derived changes
     (`[Clarify: ...]`) and direct user instructions (`[User]`).
+  - This applies to any single issue that anchors most of the content,
+    not only the one in the metadata table. If most claims trace to one
+    linked/cloned issue fetched during ingest (e.g., a parent Feature),
+    name it once — a sentence near the metadata table, or in the Problem
+    Statement's first mention — rather than repeating its marker on every
+    bullet. Reserve repeated inline markers for a source that differs
+    from both the primary tracked issue and this named anchor.
 - **Incorporate, don't narrate.** When a clarification changed the scope
   or corrected an assumption from the source material, write the content
   in its corrected form. Do not describe what the original source said,
@@ -71,8 +78,21 @@ These apply across all sections:
   be available on my CaaS cluster when it is ready...". Only combine
   when the capability is truly identical — if personas experience the
   capability differently (different constraints, different visibility
-  scope), keep separate stories. See `prd_guide.md`'s "Duplicated persona
-  stories" entry (Common Mistakes) for the canonical rule statement.
+  scope), keep separate stories. Apply the "swap test" when deciding: if
+  two persona-specific stories differ only in name and cosmetic wording,
+  not in a constraint or outcome actually stated in the source material,
+  that's duplication — don't invent a differentiating detail to justify
+  keeping them separate. See
+  `enhancement-proposals/guidelines/prd_guide.md`'s "Duplicated persona
+  stories" entry (Common Mistakes) for the canonical rule statement and
+  the swap test in full.
+- **Personas are the table, not every noun in the ticket.** Only the four
+  personas in `enhancement-proposals/guidelines/prd_guide.md`'s Personas
+  table get "As a {persona}, I want..." stories. An internal OSAC service
+  named in the source material (e.g., CaaS, or another service consuming
+  this capability) is not a persona — describe its need in Dependencies
+  instead. See `enhancement-proposals/guidelines/prd_guide.md`'s
+  "Inventing a persona for an internal service" entry (Common Mistakes).
 - **Illustrative-example allowance.** A single minimal example (a sample
   request/response shape, a short flow list, a format a user types) may
   accompany prose when it is the clearest way to convey a user-observable
@@ -80,11 +100,12 @@ These apply across all sections:
   use, always followed by prose stating the user-facing implication).
   This is not license to describe internal architecture, controller or
   reconciler logic, or name CRD fields/conditions — the PRD vs Design
-  litmus test in `prd_guide.md` still governs what the example may
-  contain. See `prd_guide.md`'s "A narrow exception: illustrative
-  examples" entry for the canonical rule statement and worked example
-  (the port-mapping format a tenant types, `8080:80`, versus a
-  reconciler's internal condition payload).
+  litmus test in `enhancement-proposals/guidelines/prd_guide.md` still
+  governs what the example may contain. See
+  `enhancement-proposals/guidelines/prd_guide.md`'s "A narrow exception:
+  illustrative examples" entry for the canonical rule statement and
+  worked example (the port-mapping format a tenant types, `8080:80`,
+  versus a reconciler's internal condition payload).
 - **Source dimensions, don't transcribe them.**
   `.design/context/osac-dimensions.md` and `review-patterns.md` help
   identify what content a feature needs (which personas, which
