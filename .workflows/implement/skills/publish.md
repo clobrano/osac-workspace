@@ -9,6 +9,16 @@ Adds a Pre-Flight Review Gate step (OSAC-938) so /implement:publish — the
 primary path most OSAC work goes through — gets the same security and
 performance checks as the create-pr skill, instead of only covering the
 create-pr path. See skills/review-gate/SKILL.md for what the gate does.
+
+Forked from ai-workflows implement/skills/publish.md @ 75ae80165985be7040400a8e6429eabff618244c
+(flightctl/ai-workflows, 2026-07-28). Per this repo's override contract
+(CONTRIBUTING.md: "full replacement, self-contained"), this file is a
+complete copy with our one step inserted — everything else is a frozen
+snapshot of that commit, not a live reference to upstream. If flightctl
+changes the other steps (pre-flight checks, PR templating, metadata, etc.)
+after this date, those changes won't reach this override automatically.
+Worth periodically diffing this file's untouched sections against the
+current upstream publish.md to catch drift.
 -->
 
 # Publish Implementation Skill
@@ -78,9 +88,14 @@ review focuses on issues that only emerge when looking at the branch
 as a whole — problems that span tasks or arise from their interaction.
 
 Read the `## Branch` section of `02-plan.md` to get the Local Base, then
-read and follow `.ai-workflows/_shared/recipes/self-review-gate.md`
-(resolve this path from the workspace root — this override lives outside
-the workflow's own directory tree) with these parameters:
+read and follow `.ai-workflows/_shared/recipes/self-review-gate.md` —
+resolve this path from the workspace root, not relative to this file. The
+upstream `publish.md` this was forked from uses a relative path
+(`../../_shared/recipes/...`) because it lives inside the `ai-workflows`
+directory tree; this override lives at `.workflows/implement/skills/`
+instead (outside that tree, per the override convention), so the same
+relative path wouldn't resolve — it would look for `_shared/` at the
+workspace root, which doesn't exist there. Use these parameters:
 
 | Parameter | Value |
 |-----------|-------|
