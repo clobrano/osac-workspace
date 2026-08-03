@@ -56,7 +56,12 @@ When a feature spans repos (e.g., API + operator):
 
 ### Commit Conventions
 - Sign off all commits with DCO: `git commit -s`
-- Add AI attribution trailer when AI-assisted:
+- Add AI attribution trailer when AI-assisted, naming whichever tool did the
+  work — never `Co-Authored-By`:
+  ```text
+  Assisted-by: <tool> <contact>
+  ```
+  Example for Claude Code:
   ```text
   Assisted-by: Claude Code <noreply@anthropic.com>
   ```

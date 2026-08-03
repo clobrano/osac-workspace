@@ -101,8 +101,13 @@ git add {fixed files}
 
 ```bash
 git commit -s -m "{issue-key}: address cross-cutting review findings" \
-  --trailer "Assisted-by: Claude Code <noreply@anthropic.com>"
+  --trailer "Assisted-by: {tool} {tool-contact}"
 ```
+
+Use the AI attribution trailer for whichever tool is actually running this
+workflow, per AGENTS.md's AI attribution convention (e.g., `Assisted-by:
+Claude Code <noreply@anthropic.com>` for Claude Code) — never
+`Co-Authored-By`.
 
 ### Step 3: Pre-Flight Review Gate (Security + Performance)
 
