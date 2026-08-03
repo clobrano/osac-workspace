@@ -16,7 +16,14 @@ below refers to the `osac-installer/` subdirectory of that clone:
 ```bash
 git clone https://github.com/osac-project/osac.git
 cd osac
-git fetch origin main && git rebase origin/main
+WORKSPACE_ROOT=$(cd .. && git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [[ -n "$WORKSPACE_ROOT" ]] && [[ -x "${WORKSPACE_ROOT}/tools/resolve-remotes.sh" ]]; then
+  _resolve_out=$("${WORKSPACE_ROOT}/tools/resolve-remotes.sh" .) || { echo "Failed to resolve remotes"; exit 1; }
+  eval "$_resolve_out"
+else
+  UPSTREAM_REMOTE=origin
+fi
+git fetch "$UPSTREAM_REMOTE" main && git rebase "$UPSTREAM_REMOTE/main"
 git submodule update --init --recursive
 cd osac-installer
 ```

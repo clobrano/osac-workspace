@@ -123,10 +123,12 @@ Missing `actionlint` or unauthenticated `gh` prints `skip` for those
 checks; the script can still exit 0 — treat skips as incomplete coverage,
 not a full pass.
 
-## Also applies
+## Also applies (enforced automatically, not just for workflows)
 
-Branch from latest `origin/main`, rebase with `--force-with-lease`, and use
-`Assisted-by:` (never `Co-Authored-By` for AI). See root `AGENTS.md`.
+Branch from latest upstream main (resolve with `tools/resolve-remotes.sh`),
+rebase before pushing with `--force-with-lease`, and add `Assisted-by:`
+trailers to AI-assisted commits (never `Co-Authored-By` for AI tools). See
+root `AGENTS.md` for the full fork/branch/attribution conventions.
 
 ## Additional resources
 
