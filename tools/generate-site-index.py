@@ -9,17 +9,30 @@ import sys
 
 
 def parse_frontmatter(path):
+    """Extract key-value pairs from a YAML frontmatter block (``---`` delimited).
+
+    Given a file like::
+
+        ---
+        marp: true
+        title: AI-Assisted SDLC
+        description: How OSAC uses Claude Code
+        ---
+
+    Returns ``{"marp": "true", "title": "AI-Assisted SDLC",
+    "description": "How OSAC uses Claude Code"}``.
+    """
     with open(path) as f:
         text = f.read()
-    m = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
-    if not m:
+    block = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
+    if not block:
         return {}
-    fm = {}
-    for line in m.group(1).splitlines():
-        match = re.match(r"^(\w[\w-]*):\s*(.+)$", line)
-        if match:
-            fm[match.group(1)] = match.group(2).strip()
-    return fm
+    fields = {}
+    for line in block.group(1).splitlines():
+        kv = re.match(r"^(\w[\w-]*):\s*(.+)$", line)
+        if kv:
+            fields[kv.group(1)] = kv.group(2).strip()
+    return fields
 
 
 def card_html(href, title, description):
