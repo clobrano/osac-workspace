@@ -198,6 +198,26 @@ find_upstream_remote() {
   return 1
 }
 
+# Returns 0 if every configured push URL for $remote in $dir end-anchor
+# matches $expected_suffix, 1 otherwise (including if the remote doesn't
+# exist or has no push URL at all). Checks push URLs specifically, not the
+# fetch URL `git remote get-url` returns by default -- `git remote set-url
+# --push` can point pushes at a completely different repo while the fetch
+# URL still looks correct, so a fetch-URL-only check can't be trusted to
+# mean "safe to push to as-is". Checks --all push URLs since `--push --add`
+# allows configuring more than one.
+fork_remote_push_matches() {
+  local dir="$1" remote="$2" expected_suffix="$3"
+  local push_urls
+  push_urls=$(git -C "$dir" remote get-url --push --all "$remote" 2>/dev/null) || return 1
+  [ -n "$push_urls" ] || return 1
+  local push_url
+  while IFS= read -r push_url; do
+    [[ "${push_url%.git}" == *"$expected_suffix" ]] || return 1
+  done <<< "$push_urls"
+  return 0
+}
+
 # Moves (never deletes) a stale standalone clone of a now-merged component
 # out from under its old top-level name. Only acts when the directory is
 # confirmed to be a clone of the old osac-project/<name> repo (precise check,
@@ -262,16 +282,16 @@ for entry in "${REPOS[@]}"; do
       UPDATE_WARNINGS=1
     fi
     if [ "$NO_FORK" = false ]; then
-      # End-anchored match against FORK_OVERRIDES-aware suffix (same pattern
-      # as is_expected_clone/get_fork_url) -- a plain substring-anywhere match
-      # would false-positive on any fork URL that merely contains
-      # "$GH_USER/$repo" as part of a longer repo name (e.g. $repo=osac
-      # matching a fork URL for osac-csi-driver), and ignoring
-      # FORK_OVERRIDES here (unlike ensure_fork_remote) would compare against
-      # the wrong expected name for any repo with an override.
+      # End-anchored, push-URL-aware, FORK_OVERRIDES-aware match (see
+      # fork_remote_push_matches) -- a plain substring-anywhere match on the
+      # fetch URL would both false-positive on any fork URL that merely
+      # contains "$GH_USER/$repo" as part of a longer repo name (e.g.
+      # $repo=osac matching a fork URL for osac-csi-driver) and miss a
+      # diverged push URL, and ignoring FORK_OVERRIDES here (unlike
+      # ensure_fork_remote) would compare against the wrong expected name
+      # for any repo with an override.
       fork_repo="${FORK_OVERRIDES[$repo]:-$repo}"
-      existing_url=$(git -C "$dir" remote get-url "$FORK_REMOTE_NAME" 2>/dev/null) || existing_url=""
-      if [ -z "$existing_url" ] || [[ "${existing_url%.git}" != *"${GH_USER}/${fork_repo}" ]]; then
+      if ! fork_remote_push_matches "$dir" "$FORK_REMOTE_NAME" "${GH_USER}/${fork_repo}"; then
         echo "🍴 Adding $FORK_REMOTE_NAME remote for existing repo $dir..."
         ensure_fork_remote "$repo" "$dir" || confirm_continue "Fork remote for $repo failed."
       fi
