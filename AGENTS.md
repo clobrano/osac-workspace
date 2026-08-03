@@ -159,7 +159,7 @@ Resolve remotes with `tools/resolve-remotes.sh`. Push to `$PUSH_REMOTE`, never t
 
 Both PRD and design ingest phases must read all files in `.design/context/`:
 
-- **`osac-dimensions.md`** — Cross-cutting dimensions (services, personas, tenant onboarding, inventory, provisioning, networking, storage, installation, E2E testing, documentation, UI) that every OSAC feature must address. Use it to guide clarifying questions during PRD clarify and persona/user-story scope during PRD draft (see Personas and `osac-docs/personas.md`); ensure the design covers all relevant dimensions.
+- **`osac-dimensions.md`** — Cross-cutting dimensions (services, personas, tenant onboarding, inventory, provisioning, networking, storage, installation, E2E testing, documentation, UI) that OSAC features should address where relevant — see `osac-dimensions.md`'s own triage rule for which dimensions apply to a given feature. Use it to guide clarifying questions during PRD clarify and persona/user-story scope during PRD draft (see Personas and `osac-docs/personas.md`); ensure the design covers the dimensions that actually apply.
 - **`review-patterns.md`** — Common design reviewer feedback themes, anti-patterns, and the design reference library. Use during PRD draft and design draft to anticipate reviewer expectations.
 
 ### Component Conventions
