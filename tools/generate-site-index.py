@@ -143,18 +143,18 @@ def main():
   </div>
   <script>
     fetch("dashboards.json")
-      .then(function(r) {
+      .then(function(r) {{
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
-      })
-      .then(function(dashboards) {
+      }})
+      .then(function(dashboards) {{
         var container = document.getElementById("tools-cards");
-        if (!dashboards.length) {
+        if (!dashboards.length) {{
           container.innerHTML = '<p style="color:#6a6e73">No dashboards configured.</p>';
           return;
-        }
+        }}
         container.innerHTML = "";
-        dashboards.forEach(function(d) {
+        dashboards.forEach(function(d) {{
           var a = document.createElement("a");
           a.className = "card";
           a.href = d.slug + "/";
@@ -165,12 +165,12 @@ def main():
           a.appendChild(h2);
           a.appendChild(p);
           container.appendChild(a);
-        });
-      })
-      .catch(function() {
+        }});
+      }})
+      .catch(function() {{
         document.getElementById("tools-cards").innerHTML =
           '<p style="color:#6a6e73">Could not load dashboards.</p>';
-      });
+      }});
   </script>
 </body>
 </html>
