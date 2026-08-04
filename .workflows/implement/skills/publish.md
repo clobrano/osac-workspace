@@ -170,7 +170,14 @@ next action is re-running this step (fixing the `{local-base}`/fetch
 issue, or re-reading the failed reviewer's `SKILL.md` fresh), not editing
 code.
 
-**If the gate reports PASS:** Continue to Step 4.
+**If the gate reports PASS:** Record the exact commit that was gated —
+Step 5 needs this to detect drift before pushing:
+
+```bash
+GATED_HEAD=$(git rev-parse HEAD)
+```
+
+Continue to Step 4.
 
 ### Step 4: Confirm Details
 
@@ -191,6 +198,21 @@ git log --oneline {local-base}..HEAD
 Confirm with the user before proceeding.
 
 ### Step 5: Push Branch
+
+**Verify nothing has changed since Step 3 gated it:**
+
+```bash
+[[ "$(git rev-parse HEAD)" == "$GATED_HEAD" ]]
+```
+
+**If `HEAD` has moved** (a new commit landed after the gate ran — most
+likely during Step 4's confirmation pause, which is interactive and can
+take arbitrary real time), the commits about to be pushed include content
+`review-gate` never reviewed. Stop. Do not push. Re-run Step 3 against the
+current `HEAD`, then re-confirm Step 4 before attempting Step 5 again.
+Uncommitted worktree changes don't need the same check here — `git push`
+only publishes commits reachable from `HEAD`, so anything left uncommitted
+simply doesn't ship, gated or not.
 
 Check the **Repository Topology** section of `01-context.md` to confirm
 this is a fork-based workflow. OSAC's convention is fork-based — `origin`
