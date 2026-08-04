@@ -199,7 +199,7 @@ Confirm with the user before proceeding.
 
 ### Step 5: Push Branch
 
-**Verify nothing has changed since Step 3 gated it:**
+**Check early whether anything has changed since Step 3 gated it:**
 
 ```bash
 [[ "$(git rev-parse HEAD)" == "$GATED_HEAD" ]]
@@ -207,11 +207,16 @@ Confirm with the user before proceeding.
 
 **If `HEAD` has moved** (a new commit landed after the gate ran — most
 likely during Step 4's confirmation pause, which is interactive and can
-take arbitrary real time), the commits about to be pushed include content
-`review-gate` never reviewed. Stop. Do not push. Re-run Step 3 against the
-current `HEAD`, then re-confirm Step 4 before attempting Step 5 again.
-Uncommitted worktree changes don't need the same check here — `git push`
-only publishes commits reachable from `HEAD`, so anything left uncommitted
+take arbitrary real time), stop before doing anything else below. Tell the
+user a new commit appeared after the gate passed, so it needs review too:
+re-run Step 3 against the current `HEAD`, then re-confirm Step 4 before
+attempting Step 5 again. This check exists to catch drift early and
+explain it clearly — the actual enforcement is the push command below,
+which pushes `$GATED_HEAD` by object, not by re-resolving `{branch-name}`,
+so even a new commit landing in the gap between this check and the push
+itself can't slip an unreviewed commit into what ships. Uncommitted
+worktree changes don't need any of this — `git push` only publishes
+commits reachable from the ref being pushed, so anything left uncommitted
 simply doesn't ship, gated or not.
 
 Check the **Repository Topology** section of `01-context.md` to confirm
@@ -224,8 +229,13 @@ wrong here means writing to a remote OSAC policy says never to write to.
 **If the repo is a fork:**
 
 ```bash
-git push -u fork {branch-name}
+git push -u fork "$GATED_HEAD:refs/heads/{branch-name}"
 ```
+
+Pushing `$GATED_HEAD` explicitly (rather than `{branch-name}`, which would
+re-resolve to whatever `HEAD` is at the moment this command runs) means
+the object actually published is always the one Step 3 gated, regardless
+of anything that happened after the check above.
 
 **If the repo is not a fork** (Repository Topology says direct clone, or
 the `fork` remote doesn't exist): **stop before pushing anything.** Do not
@@ -237,8 +247,11 @@ confirm this repo really is a direct clone, push to `origin` only after
 that explicit confirmation, never as an automatic fallback:
 
 ```bash
-git push -u origin {branch-name}
+git push -u origin "$GATED_HEAD:refs/heads/{branch-name}"
 ```
+
+Same reasoning as the fork case above — push `$GATED_HEAD` by object, not
+`{branch-name}` by re-resolution.
 
 Steps 7 and 8 below already support the direct-clone PR creation case.
 
