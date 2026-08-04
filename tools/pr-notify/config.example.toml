@@ -7,6 +7,7 @@ repos = [
     "osac-project/osac-ui",
     "osac-project/osac-test-infra",
     "osac-project/enhancement-proposals",
+    "osac-project/osac-workspace",
 ]
 
 # Slack settings (used by notify.py only)
