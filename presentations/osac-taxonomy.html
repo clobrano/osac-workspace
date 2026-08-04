@@ -77,6 +77,10 @@ Tenant users <strong>consume</strong> those offerings.</p>
 <td>gRPC/REST API server + controller, PostgreSQL</td>
 </tr>
 <tr>
+<td><strong>osac-metering</strong></td>
+<td>Watches resource lifecycle events, publishes to Kafka</td>
+</tr>
+<tr>
 <td><strong>osac-operator</strong></td>
 <td>K8s operator on each management cluster</td>
 </tr>
@@ -91,10 +95,6 @@ Tenant users <strong>consume</strong> those offerings.</p>
 <tr>
 <td><strong>osac-ui</strong></td>
 <td>React + PatternFly 6 web console</td>
-</tr>
-<tr>
-<td><strong>osac-test-infra</strong></td>
-<td>E2E test infrastructure (pytest)</td>
 </tr>
 </tbody>
 </table>
@@ -123,15 +123,19 @@ Tenant users <strong>consume</strong> those offerings.</p>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="7" data-paginate="true" data-theme="redhat" lang="en-US" data-marpit-pagination="7" style="--paginate:true;--theme:redhat;" data-marpit-pagination-total="24">
 <h2 id="deployment-topology">Deployment Topology</h2>
-<pre is="marp-pre" data-auto-scaling="downscale-only"><code>          ┌─────────────────────────┐
-          │   Fulfillment Service   │
-          │   gRPC + REST + Ctrl    │
-          │   + PostgreSQL          │
-          └────────────┬────────────┘
-                       │
-          ┌────────────┴────────────┐
-          │                         │
-  ┌───────▼──────────┐    ┌─────────▼────────┐
+<pre is="marp-pre" data-auto-scaling="downscale-only"><code>  ┌─────────────────────────┐
+  │   Fulfillment Service   │
+  │   gRPC + REST + Ctrl    │
+  │   + PostgreSQL          │
+  └──┬──────────────────┬───┘
+     │                  │ Watch stream
+     │           ┌──────▼──────┐   ┌───────────┐
+     │           │  Metering   │──►│   Kafka   │
+     │           │  Service    │   │ (AMQ Str) │
+     │           └─────────────┘   └───────────┘
+     └─────┬────────────────────────┐
+           │                        │
+  ┌────────▼─────────┐    ┌─────────▼────────┐
   │ Mgmt Cluster 1   │    │ Mgmt Cluster 2   │
   │  RHACM           │    │  RHACM           │
   │  KubeVirt        │    │  KubeVirt        │
@@ -179,7 +183,7 @@ Tenant isolation is enforced at <strong>every layer</strong> — API, policy, an
 </tr>
 <tr>
 <td><strong>Database</strong></td>
-<td>PostgreSQL (pgx/v5)</td>
+<td>PostgreSQL (pgx/v5), Kafka (AMQ Streams)</td>
 </tr>
 <tr>
 <td><strong>Auth</strong></td>

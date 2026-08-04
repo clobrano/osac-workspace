@@ -49,11 +49,11 @@ Tenant users **consume** those offerings.
 | Component | Role |
 |-----------|------|
 | **fulfillment-service** | gRPC/REST API server + controller, PostgreSQL |
+| **osac-metering** | Watches resource lifecycle events, publishes to Kafka |
 | **osac-operator** | K8s operator on each management cluster |
 | **osac-aap** | Ansible roles for infrastructure provisioning |
 | **osac-installer** | Kustomize/Helm deployment manifests |
 | **osac-ui** | React + PatternFly 6 web console |
-| **osac-test-infra** | E2E test infrastructure (pytest) |
 
 ---
 
@@ -85,15 +85,19 @@ Tenant users **consume** those offerings.
 ## Deployment Topology
 
 ```
-          ┌─────────────────────────┐
-          │   Fulfillment Service   │
-          │   gRPC + REST + Ctrl    │
-          │   + PostgreSQL          │
-          └────────────┬────────────┘
-                       │
-          ┌────────────┴────────────┐
-          │                         │
-  ┌───────▼──────────┐    ┌─────────▼────────┐
+  ┌─────────────────────────┐
+  │   Fulfillment Service   │
+  │   gRPC + REST + Ctrl    │
+  │   + PostgreSQL          │
+  └──┬──────────────────┬───┘
+     │                  │ Watch stream
+     │           ┌──────▼──────┐   ┌───────────┐
+     │           │  Metering   │──►│   Kafka   │
+     │           │  Service    │   │ (AMQ Str) │
+     │           └─────────────┘   └───────────┘
+     └─────┬────────────────────────┐
+           │                        │
+  ┌────────▼─────────┐    ┌─────────▼────────┐
   │ Mgmt Cluster 1   │    │ Mgmt Cluster 2   │
   │  RHACM           │    │  RHACM           │
   │  KubeVirt        │    │  KubeVirt        │
@@ -136,7 +140,7 @@ Tenant isolation is enforced at **every layer** — API, policy, and database.
 | Layer | Technology |
 |-------|-----------|
 | **API** | gRPC + grpc-gateway, Buf v2 |
-| **Database** | PostgreSQL (pgx/v5) |
+| **Database** | PostgreSQL (pgx/v5), Kafka (AMQ Streams) |
 | **Auth** | Keycloak (OIDC/JWT), OPA |
 | **K8s** | controller-runtime, HyperShift, KubeVirt |
 | **Provisioning** | Ansible Automation Platform |
