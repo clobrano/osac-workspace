@@ -99,7 +99,7 @@ Does the feature require new deployment prerequisites or configuration?
 *Design document specifies: Helm chart values, `osac/osac-installer`
 script changes.*
 
-Features adding Helm values must consider the Enclave Wizard pipeline — see `.design/context/enclave-wizard-pipeline.md` for the schema-to-control mapping and the three-artifact decompose chain.
+Features adding or modifying Helm values must consider the Enclave Wizard pipeline — see `.design/context/enclave-wizard-pipeline.md` for the schema-to-control mapping and the three-artifact decompose chain.
 
 ### E2E Testing
 
@@ -131,7 +131,7 @@ What UI support does the feature require in the osac-ui web console (bootstrappe
 - Does the feature require new UI components or extend existing ones in osac-ui?
 - Which Fulfillment API resources and catalog entries need console representation? (osac-ui uses the Fulfillment Public API via proxy — not direct CRD access)
 
-Cloud Infrastructure Admin UI work goes through the Enclave Wizard pipeline — see `.design/context/enclave-wizard-pipeline.md`.
+Cloud Infrastructure Admin UI work that adds or modifies `osac-installer` Helm values goes through the Enclave Wizard pipeline — see `.design/context/enclave-wizard-pipeline.md`.
 
 #### Jira component conventions
 

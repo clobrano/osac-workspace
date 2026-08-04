@@ -4,12 +4,12 @@ Any feature that adds or modifies Helm values in `osac-installer` must consider 
 
 **Pipeline:** `osac-installer` schema change → enclave OSAC plugin picks up the change → Enclave Wizard UI renders the control.
 
-**When it applies:** Any feature that adds installer Helm values that operators configure during deployment (e.g., DNS provider, storage backend, feature toggles).
+**When it applies:** Any feature that adds or modifies installer Helm values that operators configure during deployment (e.g., DNS provider, storage backend, feature toggles).
 
 ## Schema-type-to-control mapping
 
-| JSON Schema type | Wizard UI control | Example |
-|------------------|-------------------|---------|
+| JSON Schema construct | Wizard UI control | Example |
+|----------------------|-------------------|---------|
 | `enum` | Dropdown | DNS provider: `route53`, `infoblox` |
 | `boolean` | Checkbox | Enable bundled PostgreSQL |
 | `string` (no enum) | Free text input | External hostname |
@@ -21,8 +21,8 @@ The schema file is [`osac-installer/charts/osac/values.schema.json`](https://git
 
 `/design:decompose` must produce three artifacts when the pipeline applies:
 
-1. **osac-installer story** — add the Helm value to `values.schema.json` with proper type, default, and description
-2. **Enclave plugin task** — pick up the schema change and expose the parameter (Component: `Enclave`)
+1. **osac-installer story** — add or update the Helm value in both `values.yaml` and `values.schema.json` with proper type, default, and description
+2. **Enclave plugin task** — pick up the schema change and expose the parameter, blocked-by the installer story (Component: `Enclave`)
 3. **Enclave UI task** — render the control in the Wizard, blocked-by the plugin task (Component: `Enclave`)
 
 ## Complex additions
