@@ -150,10 +150,11 @@ function setupCardFilters() {
           if (!badge) { row.style.display = "none"; return; }
           var status = badge.textContent.trim().toLowerCase().replace(/ /g, "_");
           var statusKey = Object.keys(STATUS_LABELS).find(function(k) { return STATUS_LABELS[k] === badge.textContent.trim().toLowerCase(); }) || status;
+          var REVIEWABLE = ["needs_review", "needs_re_review", "changes_requested"];
           var show = false;
           if (isStale) {
             var ageCell = row.querySelector(".age-stale");
-            show = ageCell !== null;
+            show = ageCell !== null && REVIEWABLE.indexOf(statusKey) !== -1;
           } else {
             show = filter.indexOf(statusKey) !== -1;
           }
