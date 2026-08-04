@@ -362,7 +362,6 @@ WORKSPACE_ROOT=$(cd .. && git rev-parse --show-toplevel 2>/dev/null || echo "$(p
 _resolve_out=$("${WORKSPACE_ROOT}/tools/resolve-remotes.sh" .) || { echo "Failed to resolve remotes"; exit 1; }
 eval "$_resolve_out"
 git fetch "$UPSTREAM_REMOTE" main && git rebase "$UPSTREAM_REMOTE/main"
-git submodule update --init --recursive
 
 env \
     VALUES_FILE=values/vmaas-ci/values.yaml \
@@ -435,7 +434,6 @@ _resolve_out=$("${WORKSPACE_ROOT}/tools/resolve-remotes.sh" .) || { echo "Failed
 eval "$_resolve_out"
 git fetch "$UPSTREAM_REMOTE" main
 git rebase "$UPSTREAM_REMOTE/main"
-git submodule update --init --recursive
 ```
 
 ### Clone name too long

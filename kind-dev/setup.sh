@@ -814,9 +814,6 @@ deploy_osac() {
     return 1
   fi
 
-  log "Initializing osac-installer submodules..."
-  git -C "${installer_dir}" submodule update --init --recursive 2>&1 | tail -5
-
   log "Building umbrella chart dependencies..."
   helm dependency build "${chart_dir}" 2>&1 | tail -3
 

@@ -162,15 +162,10 @@ needs the same placeholder `--set` overrides CI uses — a bare `helm lint chart
 (e.g. via `make helm-lint`) fails on schema validation regardless of what the PR actually
 changes.
 
-If the change touches `values/*/values.yaml` image tags directly, also run:
-
-```bash
-scripts/sync-image-tags.sh
-```
-
-`--fix` auto-corrects drift against `osac`'s current commit SHA. Does not cover
-`osac-csi-driver`'s `csiDriver`/`csiBackends` tags yet — verify and update those
-manually if the change touches them.
+Image tags in `values/*/values.yaml` are unpinned (`latest`) for every mono-repo
+component, including `osac-csi-driver` — `scripts/sync-image-tags.sh` was removed
+upstream (`OSAC-3367`); there is no sync step to run. Real release tags are set
+automatically by `osac`'s own CI at release time, not by a feature PR.
 
 ### bare-metal-fulfillment-operator
 
