@@ -88,12 +88,12 @@ Are the technical decisions sound and consistent with OSAC patterns?
 
 Check:
 - [ ] Owner reference (`osac.openshift.io/owner-reference`) and tenant isolation (`osac.openshift.io/tenant`) annotations present on all new resources
-- [ ] API conventions per `fulfillment-service/docs/API.md`: standard object shape (`id`, `Metadata`, `<Type>Spec`, `<Type>Status`), spec/status ownership, declarative intent-based design (no imperative methods), naming conventions
+- [ ] API conventions per `osac/fulfillment-service/docs/API.md`: standard object shape (`id`, `Metadata`, `<Type>Spec`, `<Type>Status`), spec/status ownership, declarative intent-based design (no imperative methods), naming conventions
 - [ ] Spec contains only desired state (user-controlled); status contains only observed state (system-controlled)
 - [ ] Controller patterns: finalizer → status update → provisioning lifecycle
 - [ ] Conditions used for lifecycle state (preferred over phase enums for new resources)
 - [ ] Maps avoided in CRDs (prefer lists of named subobjects); pluggable architectures preferred over hardcoded implementations
-- [ ] Dependencies between components identified with ordering, and cross-repo impacts enumerated
+- [ ] Dependencies between components identified with ordering; genuine cross-repo impacts (e.g., `osac-test-infra`) enumerated separately from in-repo cross-component sequencing within `osac`
 - [ ] Integration with existing services described
 - [ ] Breaking changes called out with migration strategies
 - [ ] Terminology defined upfront and used consistently throughout
@@ -104,9 +104,9 @@ Check:
 
 ##### Calibration Examples
 
-- A=0: Design introduces new CRDs without tenant annotation, uses direct DB access instead of gRPC, proto schemas don't follow standard object shape, doesn't mention which repos need changes.
+- A=0: Design introduces new CRDs without tenant annotation, uses direct DB access instead of gRPC, proto schemas don't follow standard object shape, doesn't mention which components or repos need changes.
 - A=1: Design follows controller patterns and has tenant isolation, proto schemas use standard object shape but mix spec/status ownership (e.g., user-modifiable fields in status), doesn't describe interaction with osac-aap for provisioning.
-- A=2: Design follows all conventions, describes the full resource hierarchy with owner references, enumerates cross-repo changes (fulfillment-service proto + osac-operator controller + osac-aap role), and defines terminology upfront.
+- A=2: Design follows all conventions, describes the full resource hierarchy with owner references, enumerates cross-component changes within `osac` (fulfillment-service proto + osac-operator controller + osac-aap role) plus any genuine cross-repo impact (e.g., `osac-test-infra`), and defines terminology upfront.
 
 #### 2. Feasibility (0-2)
 

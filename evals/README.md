@@ -9,7 +9,7 @@ component repo and not a separate clone.
 | Approach | This project |
 |----------|--------------|
 | Separate `osac-review-eval` repo | **No** |
-| Bootstrapped component (like `fulfillment-service`) | **No** |
+| Bootstrapped component (like `osac-ui`) | **No** |
 | Workspace-native `evals/` tree | **Yes** |
 
 Bugfix evals remain in external [`eranco74/osac-bugfix-eval`](https://github.com/eranco74/osac-bugfix-eval).

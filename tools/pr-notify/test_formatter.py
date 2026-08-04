@@ -12,9 +12,9 @@ def _make_pr_data(**overrides) -> PRData:
     """Create a PRData with sensible defaults."""
     defaults = {
         "title": "Fix widget rendering",
-        "url": "https://github.com/osac-project/fulfillment-service/pull/42",
+        "url": "https://github.com/osac-project/osac/pull/42",
         "author": "alice",
-        "repo": "osac-project/fulfillment-service",
+        "repo": "osac-project/osac",
         "created_at": "2026-04-20T10:00:00Z",
         "is_draft": False,
         "labels": [],
@@ -55,17 +55,17 @@ class TestFormatter(unittest.TestCase):
             status=PRStatus.NEEDS_REVIEW,
             age_days=3,
             title="Fix widget rendering",
-            url="https://github.com/osac-project/fulfillment-service/pull/42",
+            url="https://github.com/osac-project/osac/pull/42",
             author="alice",
-            repo="osac-project/fulfillment-service",
+            repo="osac-project/osac",
         )
-        result = format_message([cpr], ["osac-project/fulfillment-service"])
+        result = format_message([cpr], ["osac-project/osac"])
 
         self.assertIn("*PR Status Summary*", result)
         self.assertIn("2026-04-23", result)
         self.assertIn(":eyes:", result)
         self.assertIn(
-            "<https://github.com/osac-project/fulfillment-service/pull/42|Fix widget rendering>",
+            "<https://github.com/osac-project/osac/pull/42|Fix widget rendering>",
             result,
         )
         self.assertIn("alice", result)
@@ -79,20 +79,20 @@ class TestFormatter(unittest.TestCase):
         mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
 
         prs = [
-            _make_classified(repo="osac-project/fulfillment-service", title="PR 1"),
-            _make_classified(repo="osac-project/osac-operator", title="PR 2"),
-            _make_classified(repo="osac-project/fulfillment-service", title="PR 3"),
+            _make_classified(repo="osac-project/osac", title="PR 1"),
+            _make_classified(repo="osac-project/osac-ui", title="PR 2"),
+            _make_classified(repo="osac-project/osac", title="PR 3"),
         ]
         result = format_message(
-            prs, ["osac-project/fulfillment-service", "osac-project/osac-operator"]
+            prs, ["osac-project/osac", "osac-project/osac-ui"]
         )
 
-        self.assertIn("osac-project/fulfillment-service>* (2)", result)
-        self.assertIn("osac-project/osac-operator>* (1)", result)
+        self.assertIn("osac-project/osac>* (2)", result)
+        self.assertIn("osac-project/osac-ui>* (1)", result)
 
     def test_empty_pr_list_all_clear(self):
         """3. Empty PR list returns 'All clear' message."""
-        repos = ["osac-project/fulfillment-service", "osac-project/osac-operator"]
+        repos = ["osac-project/osac", "osac-project/osac-ui"]
         result = format_message([], repos)
 
         self.assertEqual(result, "All clear — no open PRs across 2 repos :tada:")
@@ -111,7 +111,7 @@ class TestFormatter(unittest.TestCase):
         for status, expected_emoji in mapping.items():
             reviewer = "bob" if status == PRStatus.CHANGES_REQUESTED else None
             cpr = _make_classified(status=status, reviewer_name=reviewer)
-            result = format_message([cpr], ["osac-project/fulfillment-service"])
+            result = format_message([cpr], ["osac-project/osac"])
             self.assertIn(
                 expected_emoji, result, f"Missing emoji {expected_emoji} for {status}"
             )
@@ -119,7 +119,7 @@ class TestFormatter(unittest.TestCase):
         # Draft and approved PRs are filtered out entirely.
         for filtered_status in (PRStatus.DRAFT, PRStatus.APPROVED):
             cpr = _make_classified(status=filtered_status)
-            result = format_message([cpr], ["osac-project/fulfillment-service"])
+            result = format_message([cpr], ["osac-project/osac"])
             self.assertIn("All clear", result)
 
     @patch("formatter.date")
@@ -133,7 +133,7 @@ class TestFormatter(unittest.TestCase):
             _make_classified(status=PRStatus.CI_FAILING, title="Broken PR 1"),
             _make_classified(status=PRStatus.CI_FAILING, title="Broken PR 2"),
         ]
-        result = format_message(prs, ["osac-project/fulfillment-service"])
+        result = format_message(prs, ["osac-project/osac"])
 
         self.assertIn("Good PR", result)
         self.assertNotIn("Broken PR 1", result)
@@ -150,7 +150,7 @@ class TestFormatter(unittest.TestCase):
             _make_classified(status=PRStatus.CI_FAILING, title="Broken 1"),
             _make_classified(status=PRStatus.CI_FAILING, title="Broken 2"),
         ]
-        result = format_message(prs, ["osac-project/fulfillment-service"])
+        result = format_message(prs, ["osac-project/osac"])
 
         self.assertNotIn("Broken 1", result)
         self.assertNotIn("Broken 2", result)
@@ -164,7 +164,7 @@ class TestFormatter(unittest.TestCase):
         mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
 
         cpr = _make_classified(age_days=7)
-        result = format_message([cpr], ["osac-project/fulfillment-service"])
+        result = format_message([cpr], ["osac-project/osac"])
         self.assertIn(":hourglass:", result)
         self.assertNotIn(":rotating_light:", result)
 
@@ -175,7 +175,7 @@ class TestFormatter(unittest.TestCase):
         mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
 
         cpr = _make_classified(age_days=14)
-        result = format_message([cpr], ["osac-project/fulfillment-service"])
+        result = format_message([cpr], ["osac-project/osac"])
         self.assertIn(":rotating_light:", result)
         self.assertNotIn(":hourglass:", result)
 
@@ -189,7 +189,7 @@ class TestFormatter(unittest.TestCase):
             status=PRStatus.CHANGES_REQUESTED,
             reviewer_name="carol",
         )
-        result = format_message([cpr], ["osac-project/fulfillment-service"])
+        result = format_message([cpr], ["osac-project/osac"])
         self.assertIn("changes requested by <https://github.com/carol|carol>", result)
 
     @patch("formatter.date")
@@ -202,21 +202,21 @@ class TestFormatter(unittest.TestCase):
             _make_classified(
                 status=PRStatus.NEEDS_REVIEW,
                 age_days=2,
-                repo="osac-project/fulfillment-service",
+                repo="osac-project/osac",
             ),
             _make_classified(
                 status=PRStatus.CI_FAILING,
                 age_days=8,
-                repo="osac-project/fulfillment-service",
+                repo="osac-project/osac",
             ),
             _make_classified(
                 status=PRStatus.NEEDS_REVIEW,
                 age_days=15,
-                repo="osac-project/osac-operator",
+                repo="osac-project/osac-ui",
             ),
         ]
         result = format_message(
-            prs, ["osac-project/fulfillment-service", "osac-project/osac-operator"]
+            prs, ["osac-project/osac", "osac-project/osac-ui"]
         )
 
         self.assertIn("2 ready for review across 2 repos", result)
@@ -233,16 +233,16 @@ class TestFormatter(unittest.TestCase):
         prs = [
             _make_classified(
                 title=f"PR #{i}",
-                url=f"https://github.com/osac-project/fulfillment-service/pull/{i}",
+                url=f"https://github.com/osac-project/osac/pull/{i}",
             )
             for i in range(10)
         ]
-        result = format_message(prs, ["osac-project/fulfillment-service"])
+        result = format_message(prs, ["osac-project/osac"])
 
         # Should show 6 PRs + "... and 4 more" line
         self.assertEqual(result.count(":eyes:"), 6)
         self.assertIn("... and 4 more", result)
-        self.assertIn("fulfillment-service/pulls|", result)
+        self.assertIn("osac-project/osac/pulls|", result)
 
     @patch("formatter.date")
     def test_repos_with_no_prs_omitted(self, mock_date):
@@ -250,14 +250,14 @@ class TestFormatter(unittest.TestCase):
         mock_date.today.return_value = date(2026, 4, 23)
         mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
 
-        cpr = _make_classified(repo="osac-project/fulfillment-service")
+        cpr = _make_classified(repo="osac-project/osac")
         result = format_message(
             [cpr],
-            ["osac-project/fulfillment-service", "osac-project/osac-operator"],
+            ["osac-project/osac", "osac-project/osac-ui"],
         )
 
-        self.assertIn("osac-project/fulfillment-service>*", result)
-        self.assertNotIn("osac-operator", result)
+        self.assertIn("osac-project/osac>*", result)
+        self.assertNotIn("osac-ui", result)
 
 
 class TestSummaryFromData(unittest.TestCase):

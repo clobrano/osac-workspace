@@ -41,8 +41,8 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+WORKSPACE_DIR="$(realpath "${SCRIPT_DIR}/..")"
 
 # Configuration
 CLUSTER_NAME="${CLUSTER_NAME:-osac-dev}"
@@ -532,10 +532,10 @@ install_authorino() {
 # ── Data Services ──────────────────────────────────────────────────────────────
 
 install_postgres() {
-  local chart_dir="${WORKSPACE_DIR}/fulfillment-service/it/charts/postgres"
+  local chart_dir="${WORKSPACE_DIR}/osac/fulfillment-service/it/charts/postgres"
   if [[ ! -d "$chart_dir" ]]; then
     err "PostgreSQL chart not found at ${chart_dir}"
-    err "Run bootstrap.sh to clone fulfillment-service"
+    err "Run bootstrap.sh to clone osac"
     return 1
   fi
 
@@ -619,10 +619,10 @@ EOF
 }
 
 install_keycloak() {
-  local chart_dir="${WORKSPACE_DIR}/fulfillment-service/it/charts/keycloak"
+  local chart_dir="${WORKSPACE_DIR}/osac/fulfillment-service/it/charts/keycloak"
   if [[ ! -d "$chart_dir" ]]; then
     err "Keycloak chart not found at ${chart_dir}"
-    err "Run bootstrap.sh to clone fulfillment-service"
+    err "Run bootstrap.sh to clone osac"
     return 1
   fi
 
@@ -753,7 +753,7 @@ create_controller_credentials() {
 # ── OSAC Services (umbrella chart) ─────────────────────────────────────────────
 
 install_fake_crds() {
-  local fakes_dir="${WORKSPACE_DIR}/osac-operator/config/crd/fakes"
+  local fakes_dir="${WORKSPACE_DIR}/osac/osac-operator/config/crd/fakes"
   if [[ ! -d "$fakes_dir" ]]; then
     warn "Fake CRDs not found at ${fakes_dir} — skipping"
     return 0
@@ -805,12 +805,12 @@ CRDEOF
 }
 
 deploy_osac() {
-  local installer_dir="${WORKSPACE_DIR}/osac-installer"
+  local installer_dir="${WORKSPACE_DIR}/osac/osac-installer"
   local chart_dir="${installer_dir}/charts/osac"
 
   if [[ ! -d "$chart_dir" ]]; then
     err "Umbrella chart not found at ${chart_dir}"
-    err "Make sure osac-installer is checked out (run bootstrap.sh)"
+    err "Make sure osac is checked out (run bootstrap.sh)"
     return 1
   fi
 
@@ -1057,7 +1057,10 @@ configure_awx() {
     -H "Content-Type: application/json" \
     -d '{"AWX_COLLECTIONS_ENABLED": false, "AWX_ROLES_ENABLED": false}' >/dev/null
 
-  # Create project from osac-aap repo (or get existing)
+  # Create project from the osac mono-repo (or get existing). osac-aap's playbooks
+  # now live in the osac-aap/ subdirectory of osac-project/osac — AWX's Project API
+  # has no sparse-checkout/subdirectory field (it always clones the whole repo), so
+  # each job template's "playbook" path below is prefixed with osac-aap/ instead.
   local project_response
   project_response=$(curl -s -X POST http://localhost:8052/api/v2/projects/ \
     -H "Authorization: Bearer ${awx_token}" \
@@ -1066,7 +1069,7 @@ configure_awx() {
       "name": "osac-aap",
       "organization": 1,
       "scm_type": "git",
-      "scm_url": "https://github.com/osac-project/osac-aap.git",
+      "scm_url": "https://github.com/osac-project/osac.git",
       "scm_branch": "main",
       "scm_update_on_launch": false
     }')
@@ -1074,11 +1077,26 @@ configure_awx() {
   # Extract project ID (handle both new creation and existing project)
   project_id=$(echo "$project_response" | python3 -c "import json,sys; data=json.load(sys.stdin); print(data.get('id', ''))" 2>/dev/null)
 
-  # If creation failed (project exists), get it by name
+  # If creation failed (project exists), get it by name. A project surviving
+  # from a pre-mono-repo run of this script still has the old standalone
+  # osac-aap scm_url, so patch it to the current one and trigger a resync —
+  # otherwise the reused project keeps cloning the wrong (now-merged) repo.
   if [[ -z "$project_id" ]]; then
     project_id=$(curl -s -H "Authorization: Bearer ${awx_token}" \
       "http://localhost:8052/api/v2/projects/?name=osac-aap" | \
       python3 -c "import json,sys; data=json.load(sys.stdin); print(data['results'][0]['id'] if data.get('results') else '')")
+
+    if [[ -n "$project_id" ]]; then
+      curl -s -X PATCH "http://localhost:8052/api/v2/projects/${project_id}/" \
+        -H "Authorization: Bearer ${awx_token}" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "scm_url": "https://github.com/osac-project/osac.git",
+          "scm_branch": "main"
+        }' >/dev/null
+      curl -s -X POST "http://localhost:8052/api/v2/projects/${project_id}/update/" \
+        -H "Authorization: Bearer ${awx_token}" >/dev/null
+    fi
   fi
 
   # Wait for project sync
@@ -1101,8 +1119,8 @@ tenant_storage_classes:
     tier: default"
 
   local compute_templates=(
-    "osac-create-compute-instance:playbook_osac_create_compute_instance.yml"
-    "osac-delete-compute-instance:playbook_osac_delete_compute_instance.yml"
+    "osac-create-compute-instance:osac-aap/playbook_osac_create_compute_instance.yml"
+    "osac-delete-compute-instance:osac-aap/playbook_osac_delete_compute_instance.yml"
   )
 
   for entry in "${compute_templates[@]}"; do
@@ -1125,12 +1143,12 @@ tenant_storage_classes:
   # Create networking job templates (use real playbooks — they are effective no-ops
   # on kind because there is no matching implementation strategy / fabric manager)
   local network_templates=(
-    "osac-create-virtual-network:playbook_osac_create_virtual_network.yml"
-    "osac-delete-virtual-network:playbook_osac_delete_virtual_network.yml"
-    "osac-create-subnet:playbook_osac_create_subnet.yml"
-    "osac-delete-subnet:playbook_osac_delete_subnet.yml"
-    "osac-create-security-group:playbook_osac_create_security_group.yml"
-    "osac-delete-security-group:playbook_osac_delete_security_group.yml"
+    "osac-create-virtual-network:osac-aap/playbook_osac_create_virtual_network.yml"
+    "osac-delete-virtual-network:osac-aap/playbook_osac_delete_virtual_network.yml"
+    "osac-create-subnet:osac-aap/playbook_osac_create_subnet.yml"
+    "osac-delete-subnet:osac-aap/playbook_osac_delete_subnet.yml"
+    "osac-create-security-group:osac-aap/playbook_osac_create_security_group.yml"
+    "osac-delete-security-group:osac-aap/playbook_osac_delete_security_group.yml"
   )
 
   for entry in "${network_templates[@]}"; do
@@ -1450,7 +1468,7 @@ print_summary() {
   echo "  Keycloak Admin:   https://keycloak.${OSAC_NAMESPACE}.localhost:${EXTERNAL_INGRESS_PORT}/admin  (admin/password)"
   echo ""
   info "CLI quickstart:"
-  echo "  cd fulfillment-service && go build -o osac ./cmd/osac"
+  echo "  cd osac/fulfillment-service && go build -o osac ./cmd/osac"
   echo "  TOKEN=\$(kubectl -n ${OSAC_NAMESPACE} create token admin --duration=1h)"
   echo "  ./osac login https://api.${OSAC_NAMESPACE}.localhost:${EXTERNAL_INGRESS_PORT} --token \"\$TOKEN\" --insecure"
   echo "  ./osac get tenants"

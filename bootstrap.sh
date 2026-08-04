@@ -3,32 +3,44 @@ set -euo pipefail
 
 GITHUB_ORG="osac-project"
 NO_FORK=false
+FORK_REMOTE_NAME="fork"
+
+declare -A FORK_OVERRIDES=()
+if [[ -f "$(dirname "$0")/fork-overrides.sh" ]]; then
+  source "$(dirname "$0")/fork-overrides.sh"
+fi
 
 usage() {
   cat <<'EOF'
-Usage: ./bootstrap.sh [--no-fork]
+Usage: ./bootstrap.sh [--no-fork] [--fork-name NAME]
 
 Sets up the OSAC workspace by cloning all component repos.
 
 By default, each repo is forked to your GitHub account and cloned with:
-  origin = osac-project/<repo>  (upstream source, PR target)
-  fork   = <your-username>/<repo>  (push target for feature branches)
+  origin     = osac-project/<repo>  (upstream source, PR target)
+  <fork-name> = <your-username>/<repo>  (push target for feature branches)
 
 Options:
-  --no-fork    Clone directly from osac-project without forking.
-               Useful for read-only access or CI environments.
-  --help       Show this help message.
+  --no-fork          Clone directly from osac-project without forking.
+                     Useful for read-only access or CI environments.
+  --fork-name NAME   Name for the push remote (default: fork).
+                     Use any name you prefer — tools/resolve-remotes.sh
+                     detects remotes by URL, not by name.
+  --help             Show this help message.
 
 Prerequisites:
   - gh CLI installed and authenticated (gh auth login)
 EOF
 }
 
-for arg in "$@"; do
-  case "$arg" in
-    --no-fork) NO_FORK=true ;;
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-fork) NO_FORK=true; shift ;;
+    --fork-name)
+      [[ -n "${2:-}" ]] || { echo "Error: --fork-name requires a value"; usage; exit 1; }
+      FORK_REMOTE_NAME="$2"; shift 2 ;;
     --help|-h) usage; exit 0 ;;
-    *) echo "Unknown option: $arg"; usage; exit 1 ;;
+    *) echo "Unknown option: $1"; usage; exit 1 ;;
   esac
 done
 
@@ -53,10 +65,11 @@ fi
 
 get_fork_url() {
   local repo="$1"
+  local fork_repo="${FORK_OVERRIDES[$repo]:-$repo}"
   if [ "$GIT_PROTOCOL" = "ssh" ]; then
-    echo "git@github.com:${GH_USER}/${repo}.git"
+    echo "git@github.com:${GH_USER}/${fork_repo}.git"
   else
-    echo "https://github.com/${GH_USER}/${repo}.git"
+    echo "https://github.com/${GH_USER}/${fork_repo}.git"
   fi
 }
 
@@ -74,30 +87,41 @@ ensure_fork_remote() {
   local repo="$1"
   local dir="$2"
   # Ensure fork exists on GitHub, then verify it
-  if ! gh repo fork "${GITHUB_ORG}/${repo}" --clone=false --default-branch-only; then
-    if ! gh repo view "${GH_USER}/${repo}"; then
+  local fork_repo="${FORK_OVERRIDES[$repo]:-$repo}"
+  local fork_name_args=()
+  if [[ "$fork_repo" != "$repo" ]]; then
+    fork_name_args=(--fork-name "$fork_repo")
+  fi
+  if ! gh repo fork "${GITHUB_ORG}/${repo}" --clone=false --default-branch-only "${fork_name_args[@]}"; then
+    if ! gh repo view "${GH_USER}/${fork_repo}"; then
       echo "❌ Failed to fork ${GITHUB_ORG}/${repo}. Skipping fork remote."
       return 1
     fi
   fi
   local url
   url=$(get_fork_url "$repo")
-  git -C "$dir" remote add fork "$url"
-  git -C "$dir" fetch fork
+  if git -C "$dir" remote get-url "$FORK_REMOTE_NAME" &>/dev/null; then
+    # Remote name already taken (e.g., --fork-name origin on a fresh clone).
+    # Rename the existing remote out of the way, then add the fork.
+    local old_url target
+    old_url=$(git -C "$dir" remote get-url "$FORK_REMOTE_NAME")
+    target="upstream"
+    while git -C "$dir" remote get-url "$target" &>/dev/null; do
+      target="osac-${target}"
+    done
+    git -C "$dir" remote rename "$FORK_REMOTE_NAME" "$target"
+    echo "   Renamed existing '$FORK_REMOTE_NAME' ($old_url) → '$target'"
+  fi
+  git -C "$dir" remote add "$FORK_REMOTE_NAME" "$url"
+  git -C "$dir" fetch "$FORK_REMOTE_NAME"
 }
 
 REPOS=(
-  "fulfillment-service"
-  "osac-operator"
-  "osac-aap"
-  "osac-installer"
+  "osac"
   "osac-test-infra"
   "osac-ui"
   "enhancement-proposals"
   "docs:osac-docs"
-  "host-management-openstack"
-  "bare-metal-fulfillment-operator"
-  "osac-csi-driver"
 )
 
 # Reference repos — cloned read-only from osac-project, no fork remote added.
@@ -107,33 +131,129 @@ REFERENCE_REPOS=(
   "osac-ux"
 )
 
+# Components merged into osac-project/osac as of OSAC-1739. Old standalone
+# top-level clones (if present) are no longer bootstrap-managed — quarantined
+# to .legacy-repos/<name>/ via `mv` below (never deleted; all local git
+# state, including uncommitted changes and unpushed commits, stays intact).
+# Keep in sync with skills/create-pr/SKILL.md's merged-component detection
+# (Step 1's TOUCHED_COMPONENTS regex and Step 3's File Classification table)
+# if a future component merges into osac or one of these is later split out.
+MERGED_COMPONENTS=(
+  "fulfillment-service"
+  "osac-operator"
+  "osac-aap"
+  "osac-installer"
+  "bare-metal-fulfillment-operator"
+  "osac-csi-driver"
+)
+LEGACY_REPOS_DIR=".legacy-repos"
+
+# Self-update: pull latest osac-workspace before updating components
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+if [ "$CURRENT_BRANCH" = "main" ]; then
+  echo "📦 Updating osac-workspace..."
+  if ! git fetch origin -q; then
+    echo "   ⚠️  Fetch failed for osac-workspace. Skipping self-update."
+  elif ! git rebase origin/main --autostash -q; then
+    git rebase --abort 2>/dev/null || true
+    echo "   ⚠️  Rebase failed for osac-workspace — continuing with current version"
+  else
+    echo "   ✅ osac-workspace up to date"
+  fi
+else
+  echo "ℹ️  osac-workspace on branch '$CURRENT_BRANCH', skipping self-update"
+fi
+
 UPDATE_WARNINGS=0
 
 is_expected_clone() {
   local dir="$1" repo="$2"
   local expected_suffix="${GITHUB_ORG}/${repo}"
-  local origin_url
-  origin_url=$(git -C "$dir" remote get-url origin 2>/dev/null) || return 1
-  [[ "${origin_url%.git}" == *"$expected_suffix" ]]
+  local url
+  for remote in $(git -C "$dir" remote 2>/dev/null); do
+    url=$(git -C "$dir" remote get-url "$remote" 2>/dev/null) || continue
+    if [[ "${url%.git}" == *"$expected_suffix" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+find_upstream_remote() {
+  local dir="$1" repo="$2"
+  local expected_suffix="${GITHUB_ORG}/${repo}"
+  local url
+  for remote in $(git -C "$dir" remote 2>/dev/null); do
+    url=$(git -C "$dir" remote get-url "$remote" 2>/dev/null) || continue
+    if [[ "${url%.git}" == *"$expected_suffix" ]]; then
+      echo "$remote"
+      return
+    fi
+  done
+  echo "origin"
+}
+
+# Moves (never deletes) a stale standalone clone of a now-merged component
+# out from under its old top-level name. Only acts when the directory is
+# confirmed to be a clone of the old osac-project/<name> repo (precise check,
+# not a fuzzy name match) — anything else is left untouched. No-op if the
+# directory doesn't exist (already migrated or never cloned) or has already
+# been quarantined.
+quarantine_merged_component() {
+  local name="$1"
+  [ -d "$name" ] || return 0
+  is_expected_clone "$name" "$name" || return 0
+
+  local dest="${LEGACY_REPOS_DIR}/${name}"
+  if [ -e "$dest" ]; then
+    echo "⚠️  ${dest} already exists — leaving $name/ in place. Resolve manually (compare and remove one of them)."
+    UPDATE_WARNINGS=1
+    return 0
+  fi
+
+  # mkdir and mv are both part of the `if` condition (not bare statements) so
+  # a failure here — e.g. a read-only parent directory — degrades to the
+  # warning below instead of tripping `set -e` and aborting the whole script.
+  if mkdir -p "$LEGACY_REPOS_DIR" && mv "$name" "$dest"; then
+    cat <<EOF
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦➡️  $name/ is now part of osac-project/osac — moved to $dest/
+   Nothing was deleted: uncommitted changes, stashes, and unpushed
+   commits inside $dest/ are untouched. Use osac/$name/ going forward.
+   Once you've confirmed you don't need it, remove it with:
+     rm -rf $dest
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EOF
+  else
+    echo "⚠️  Could not move $name/ to $dest/ — see error above."
+    echo "   It's superseded by osac/$name/; move or remove it manually when convenient."
+    UPDATE_WARNINGS=1
+  fi
 }
 
 for entry in "${REPOS[@]}"; do
   repo="${entry%%:*}"
   dir="${entry#*:}"
   if [ -d "$dir" ] && is_expected_clone "$dir" "$repo"; then
+    upstream_remote=$(find_upstream_remote "$dir" "$repo")
     echo "📦 Updating $dir..."
-    if ! (cd "$dir" && git fetch origin); then
+    if ! (cd "$dir" && git fetch "$upstream_remote"); then
       echo "⚠️  Fetch failed for $dir. Skipping update."
       UPDATE_WARNINGS=1
-    elif ! (cd "$dir" && git rebase origin/main --autostash); then
+    elif ! (cd "$dir" && git rebase "$upstream_remote/main" --autostash); then
       (cd "$dir" && git rebase --abort 2>/dev/null || true)
       echo "⚠️  Rebase failed for $dir (likely local commits conflict with upstream)."
-      echo "   Skipping update — resolve manually with: cd $dir && git rebase origin/main"
+      echo "   Skipping update — resolve manually with: cd $dir && git rebase $upstream_remote/main"
       UPDATE_WARNINGS=1
     fi
-    if [ "$NO_FORK" = false ] && ! git -C "$dir" remote get-url fork &>/dev/null; then
-      echo "🍴 Adding fork remote for existing repo $dir..."
-      ensure_fork_remote "$repo" "$dir" || confirm_continue "Fork remote for $repo failed."
+    if [ "$NO_FORK" = false ]; then
+      existing_url=$(git -C "$dir" remote get-url "$FORK_REMOTE_NAME" 2>/dev/null) || existing_url=""
+      if [ -z "$existing_url" ] || [[ "${existing_url%.git}" != *"${GH_USER}/${repo}"* ]]; then
+        echo "🍴 Adding $FORK_REMOTE_NAME remote for existing repo $dir..."
+        ensure_fork_remote "$repo" "$dir" || confirm_continue "Fork remote for $repo failed."
+      fi
     fi
   elif [ -d "$dir" ]; then
     echo "⚠️  Skipping $dir — directory exists but is not a clone of ${GITHUB_ORG}/${repo}."
@@ -144,18 +264,23 @@ for entry in "${REPOS[@]}"; do
     git clone "https://github.com/${GITHUB_ORG}/${repo}.git" "$dir"
 
     if [ "$NO_FORK" = false ]; then
-      echo "🍴 Adding fork remote for $repo..."
+      echo "🍴 Adding $FORK_REMOTE_NAME remote for $repo..."
       ensure_fork_remote "$repo" "$dir" || confirm_continue "Fork remote for $repo failed."
     fi
   fi
+done
+
+for name in "${MERGED_COMPONENTS[@]}"; do
+  quarantine_merged_component "$name"
 done
 
 for entry in "${REFERENCE_REPOS[@]}"; do
   repo="${entry%%:*}"
   dir="${entry#*:}"
   if [ -d "$dir" ] && is_expected_clone "$dir" "$repo"; then
+    upstream_remote=$(find_upstream_remote "$dir" "$repo")
     echo "📦 Updating $dir (reference)..."
-    (cd "$dir" && git fetch origin && git rebase origin/main --autostash) || \
+    (cd "$dir" && git fetch "$upstream_remote" && git rebase "$upstream_remote/main" --autostash) || \
       echo "⚠️  Update failed for $dir — skipping."
   elif [ ! -d "$dir" ]; then
     echo "📥 Cloning $repo (reference, no fork)..."
@@ -245,13 +370,15 @@ echo "📂 Available repos:"
 for entry in "${REPOS[@]}"; do
   dir="${entry#*:}"
   if [ -d "$dir" ]; then
+    repo="${entry%%:*}"
     branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "unknown")
-    origin_url=$(git -C "$dir" remote get-url origin 2>/dev/null || echo "not set")
-    fork_url=$(git -C "$dir" remote get-url fork 2>/dev/null || echo "not set")
+    upstream_remote=$(find_upstream_remote "$dir" "$repo")
+    upstream_url=$(git -C "$dir" remote get-url "$upstream_remote" 2>/dev/null || echo "not set")
+    fork_url=$(git -C "$dir" remote get-url "$FORK_REMOTE_NAME" 2>/dev/null || echo "not set")
     echo "   $dir (branch: $branch)"
-    echo "     origin: $origin_url"
+    echo "     $upstream_remote: $upstream_url"
     if [ "$fork_url" != "not set" ]; then
-      echo "     fork:   $fork_url"
+      echo "     $FORK_REMOTE_NAME: $fork_url"
     fi
   fi
 done
@@ -260,5 +387,5 @@ if [ "$NO_FORK" = true ]; then
   echo ""
   echo "💡 Cloned in read-only mode. To contribute, re-run without --no-fork"
   echo "   or add your fork manually:"
-  echo "   cd <repo> && git remote add fork \$(gh config get git_protocol | grep -q ssh && echo git@github.com: || echo https://github.com/)\$(gh api user -q .login)/<repo>.git"
+  echo "   cd <repo> && git remote add <name> \$(gh config get git_protocol | grep -q ssh && echo git@github.com: || echo https://github.com/)\$(gh api user -q .login)/<repo>.git"
 fi

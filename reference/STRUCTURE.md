@@ -5,39 +5,39 @@
 ## Directory Layout
 
 ```
-osac-project/                          # Monorepo root
-├── fulfillment-service/               # gRPC API server with REST gateway
-│   ├── cmd/                           # Binary entry points
-│   ├── internal/                      # Private implementation
-│   ├── proto/                         # Protocol Buffer definitions
-│   ├── it/                            # Integration tests
-│   ├── charts/                        # Helm deployment manifests
-│   ├── manifests/                     # Kustomize deployment manifests
-│   ├── docs/                          # API documentation
-│   └── go.mod                         # Go module definition
-├── osac-operator/                     # Kubernetes operator
-│   ├── cmd/                           # Operator binary + console-proxy
-│   ├── api/                           # Kubernetes CRD definitions
-│   ├── internal/                      # Private implementation
-│   ├── pkg/                           # Shared packages (provisioning, aap)
-│   ├── config/                        # Kustomize configuration
-│   ├── test/                          # E2E and unit tests
-│   └── go.mod                         # Go module definition
-├── bare-metal-fulfillment-operator/   # Bare metal host provisioning operator
-│   ├── cmd/                           # Operator binary entry point
-│   ├── api/                           # CRD definitions (BareMetalInstance, BareMetalPool)
-│   ├── internal/                      # Controllers, inventory, profile management
-│   ├── config/                        # Kustomize configuration
-│   └── charts/                        # Helm deployment manifests
-├── osac-aap/                          # Ansible provisioning
-│   └── collections/                   # Ansible collection with roles/playbooks
-├── osac-installer/                    # Installation manifests
+osac-workspace/                        # Meta-workspace root
+├── osac/                              # Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator + osac-csi-driver
+│   ├── fulfillment-service/           # gRPC API server with REST gateway
+│   │   ├── cmd/                       # Binary entry points
+│   │   ├── internal/                  # Private implementation
+│   │   ├── proto/                     # Protocol Buffer definitions
+│   │   ├── it/                        # Integration tests
+│   │   ├── charts/                    # Helm deployment manifests
+│   │   ├── manifests/                 # Kustomize deployment manifests
+│   │   ├── docs/                      # API documentation
+│   │   └── go.mod                     # Go module definition
+│   ├── osac-operator/                 # Kubernetes operator
+│   │   ├── cmd/                       # Operator binary + console-proxy
+│   │   ├── api/                       # Kubernetes CRD definitions
+│   │   ├── internal/                  # Private implementation
+│   │   ├── pkg/                       # Shared packages (provisioning, aap)
+│   │   ├── config/                    # Kustomize configuration
+│   │   ├── test/                      # E2E and unit tests
+│   │   └── go.mod                     # Go module definition
+│   ├── bare-metal-fulfillment-operator/   # Bare metal host provisioning operator
+│   │   ├── cmd/                       # Operator binary entry point
+│   │   ├── api/                       # CRD definitions (BareMetalInstance, BareMetalPool)
+│   │   ├── internal/                  # Controllers, inventory, profile management
+│   │   ├── config/                    # Kustomize configuration
+│   │   └── charts/                    # Helm deployment manifests
+│   ├── osac-aap/                      # Ansible provisioning
+│   │   └── collections/               # Ansible collection with roles/playbooks
+│   ├── osac-installer/                # Installation manifests
+│   └── osac-csi-driver/               # CSI storage driver
 ├── osac-test-infra/                   # Integration test utilities
 ├── osac-ui/                           # Web console (React, PatternFly 6)
 ├── osac-ux/                           # Read-only UI reference (React 19, PatternFly 6)
-├── osac-csi-driver/                   # CSI storage driver
 ├── osac-docs/                         # Architecture docs and guides
-├── host-management-openstack/         # Bare metal host management via OpenStack
 ├── docs/                              # Additional documentation
 ├── enhancement-proposals/             # Design documents
 ├── CLAUDE.md                          # Project development guide
@@ -45,6 +45,12 @@ osac-project/                          # Monorepo root
 ```
 
 ## Directory Purposes
+
+All component-relative paths below (e.g., `fulfillment-service/cmd`,
+`osac-operator/api/v1alpha1`) are relative to `osac/` — i.e.,
+`fulfillment-service/cmd` means `osac/fulfillment-service/cmd`.
+`osac-test-infra` and `enhancement-proposals` are genuinely separate
+top-level repos, not `osac/` subdirectories.
 
 **fulfillment-service/cmd:**
 - Purpose: Binary entry points for service, CLI, and dev tools

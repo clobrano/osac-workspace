@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
+DEFAULT_TITLE = "OSAC PR Dashboard"
+
 
 class PRStatus(Enum):
     NEEDS_REVIEW = "needs_review"
@@ -26,6 +28,9 @@ class Config:
     slack_channel: str | None = None
     slack_creds_dir: str | None = None
     dashboard: DashboardConfig | None = None
+    filter_authors: list[str] | None = None
+    title: str | None = None
+    description: str | None = None
 
 
 @dataclass

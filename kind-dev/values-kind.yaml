@@ -1,5 +1,5 @@
 # Umbrella chart values for kind development environment
-# Usage: helm install osac osac-installer/charts/osac/ --values kind-dev/values-kind.yaml --namespace osac
+# Usage: helm install osac osac/osac-installer/charts/osac/ --values kind-dev/values-kind.yaml --namespace osac
 
 # --- Operator ---
 operator:

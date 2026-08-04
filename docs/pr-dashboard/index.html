@@ -41,7 +41,7 @@ footer{text-align:center;color:#6a6e73;font-size:.8rem;margin-top:40px;padding-t
 <body>
 <div class="container">
 <header>
-<h1>OSAC PR Dashboard</h1>
+<h1 id="dashboard-title">PR Dashboard</h1>
 <div class="updated" id="updated">Loading...</div>
 </header>
 <div id="content">
@@ -160,6 +160,9 @@ function renderCIHealth(ciHealth) {
 }
 
 function render(data) {
+  var title = data.title || "OSAC PR Dashboard";
+  document.getElementById("dashboard-title").textContent = title;
+  document.title = title;
   document.getElementById("updated").textContent = "Last updated: " + data.generated_at;
   var html = renderCards(data.summary);
 

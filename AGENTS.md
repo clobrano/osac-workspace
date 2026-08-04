@@ -7,7 +7,7 @@ Meta-workspace that bootstraps all OSAC (Open Sovereign AI Cloud) component repo
 - **`osac-workspace/` is the project root** — all work happens from here; component docs are loaded via progressive disclosure
 - **Never skip tenant isolation metadata** (`osac.openshift.io/tenant`, `osac.openshift.io/owner-reference` annotations) in new resources
 - **Always `buf lint` before committing** proto changes; regenerate with `buf generate`
-- **Fork-based workflow**: always push to `fork` remote, never to `origin`. PRs go from `fork/<branch>` to `origin/main`
+- **Fork-based workflow**: push to `$PUSH_REMOTE`, never to `$UPSTREAM_REMOTE` — resolve with `tools/resolve-remotes.sh`
 - **AI attribution**: use an `Assisted-by: <tool> <contact>` trailer on commits, naming whichever AI tool actually did the work — never use `Co-Authored-By` for AI tools (Red Hat attribution standard). Example for Claude Code: `Assisted-by: Claude Code <noreply@anthropic.com>`
 - When debugging Kubernetes operators, check for stale vendor directories and cached images before rebuilding
 - **Don't raise `.skillsaw.yaml`'s `context-budget` skill limit to silence a token-count warning** — split the oversized `SKILL.md` into `references/`/`steps/` instead (see Skill Authoring Conventions)
@@ -41,48 +41,53 @@ Re-run `./bootstrap.sh` anytime to update all repos to latest `main`.
 
 Meta-workspace — run `./bootstrap.sh` to clone/update all component repos to latest `main`. **In component repos, read `CLAUDE.md` first** (progressive disclosure). Use that component's `AGENTS.md` where the table below shows **Yes** for tool-agnostic build/test conventions.
 
-Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-service`.
+Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-service`, which was then merged with `osac-operator`, `osac-aap`, `osac-installer`, `bare-metal-fulfillment-operator`, and `osac-csi-driver` into the `osac` mono-repo below.
 
 | Component | Description | AGENTS.md |
 |-----------|-------------|-----------|
-| [`fulfillment-service`](https://github.com/osac-project/fulfillment-service) | gRPC server + REST gateway, PostgreSQL, integrated API definitions | Yes |
-| [`osac-operator`](https://github.com/osac-project/osac-operator) | Kubernetes operator for OpenShift clusters via Hosted Control Planes | Yes |
-| [`osac-aap`](https://github.com/osac-project/osac-aap) | Ansible Automation Platform roles for infrastructure provisioning | — |
-| [`osac-installer`](https://github.com/osac-project/osac-installer) | Helm charts, Kustomize overlays, and installation prerequisites | Yes |
+| [`osac`](https://github.com/osac-project/osac) | Mono-repo: `fulfillment-service` + `osac-operator` + `osac-aap` + `osac-installer` + `bare-metal-fulfillment-operator` + `osac-csi-driver` (see subdirectories below) | — |
+| `osac/fulfillment-service` | gRPC server + REST gateway, PostgreSQL, integrated API definitions | Yes |
+| `osac/osac-operator` | Kubernetes operator for OpenShift clusters via Hosted Control Planes | Yes |
+| `osac/osac-aap` | Ansible Automation Platform roles for infrastructure provisioning | Yes |
+| `osac/osac-installer` | Helm charts and installation prerequisites | Yes |
+| `osac/bare-metal-fulfillment-operator` | Kubernetes operator for bare metal fulfillment | Yes |
+| `osac/osac-csi-driver` | CSI storage driver, routes to vendor backends via fulfillment-service storage tiers | — (see `README.md`) |
 | [`osac-test-infra`](https://github.com/osac-project/osac-test-infra) | Integration testing infrastructure | — |
 | [`osac-ui`](https://github.com/osac-project/osac-ui) | OSAC UI web console | Yes |
 | [`osac-ux`](https://github.com/osac-project/osac-ux) | React 19 + PatternFly 6 UI console — read-only UI reference | Yes (`osac-ux/AGENTS.md`) |
 | [`enhancement-proposals`](https://github.com/osac-project/enhancement-proposals) | Design documents and RFCs | — |
-| [`docs`](https://github.com/osac-project/docs) | Architecture docs and guides (see `docs/architecture/`) | — |
-| [`host-management-openstack`](https://github.com/osac-project/host-management-openstack) | Bare metal host management via OpenStack | — |
-| [`bare-metal-fulfillment-operator`](https://github.com/osac-project/bare-metal-fulfillment-operator) | Kubernetes operator for bare metal fulfillment | Yes |
+| [`docs`](https://github.com/osac-project/docs) | Architecture docs and guides (see `osac-docs/architecture/`) | — |
 
 ## Build and Test
 
 This workspace has no build step of its own. Each component repo documents build and test commands in its `AGENTS.md` or `CLAUDE.md`.
 
-| Component              | Build                              | Unit Tests               | Lint                       |
-|------------------------|------------------------------------|--------------------------|----------------------------|
-| `fulfillment-service/` | `go build`                         | `ginkgo run -r internal` | `uv run dev.py lint`       |
-| `osac-operator/`       | `make build`                       | `make test`              | `make lint`                |
-| `osac-aap/`            | —                                  | `make test`              | `uv run ansible-lint`      |
-| `osac-installer/`      | `kustomize build overlays/<name>`  | —                        | `helm lint charts/osac/`   |
-| `osac-test-infra/`     | —                                  | —                        | `make lint`                |
-| `osac-ui/`             | `pnpm build`                       | `pnpm test`              | `pnpm lint`                |
+| Component                               | Build        | Unit Tests               | Lint                  |
+|------------------------------------------|--------------|--------------------------|-----------------------|
+| `osac/fulfillment-service/`             | `go build ./...` | `ginkgo run -r internal` | `uv run dev.py lint`  |
+| `osac/osac-operator/`                   | `make build` | `make test`              | `make lint`           |
+| `osac/osac-aap/`                        | —            | `make test`              | `uv run ansible-lint` |
+| `osac/osac-installer/`                  | —            | —                        | `make helm-lint`      |
+| `osac/bare-metal-fulfillment-operator/` | `make build` | `make test`              | `make lint`           |
+| `osac/osac-csi-driver/`                 | `make build` | `make test`              | `make lint`           |
+| `osac-test-infra/`                      | —            | —                        | `make lint`           |
+| `osac-ui/`                              | `pnpm build` | `pnpm test`              | `pnpm lint`            |
+
+`osac/osac-installer/`'s `make helm-lint` fails unconditionally as shipped — `charts/osac/`'s values schema requires non-empty `service.externalHostname`/`internalHostname`, which every real values file leaves blank for runtime injection. See `skills/create-pr/SKILL.md`'s `osac-installer` validation block for the `--set` overrides needed to actually run it.
 
 ### Quick Reference
 
 ```bash
-# fulfillment-service
-cd fulfillment-service
-go build                              # Build
+# osac/fulfillment-service
+cd osac/fulfillment-service
+go build ./...                        # Build
 ginkgo run -r internal                # Unit tests (excludes integration)
 ginkgo run it                         # Integration tests (requires kind)
 IT_KEEP_KIND=true ginkgo run it       # Preserve kind cluster for debugging
 buf lint && buf generate              # Proto lint + codegen
 
-# osac-operator
-cd osac-operator
+# osac/osac-operator
+cd osac/osac-operator
 make image-build image-push IMG=<registry>/osac-operator:tag
 make install                          # Install CRDs
 make deploy IMG=<registry>/osac-operator:tag
@@ -92,31 +97,39 @@ make deploy IMG=<registry>/osac-operator:tag
 
 ### Git Workflow
 
-- **Fork-based**: push to `fork` remote, never to `origin`. PRs go from `fork/<branch>` to `origin/main`.
+- **Fork-based**: push to `$PUSH_REMOTE`, never to `$UPSTREAM_REMOTE`
 - **Branch naming**: `<type>/<ticket-or-description>` (e.g., `feat/OSAC-23607`, `fix/duplicate-aap-jobs`)
-- **Remotes**: `origin` = upstream osac-project (read-only), `fork` = developer fork (push target)
+- **Resolve remotes**: `eval $(tools/resolve-remotes.sh <component-path>)` sets `$UPSTREAM_REMOTE` and `$PUSH_REMOTE` (handles both bootstrap and manual remote naming)
 - **DCO sign-off**: `git commit -s` on all commits
 - **AI attribution**: `Assisted-by: <tool> <contact>` trailer, naming whichever AI tool actually did the work — never `Co-Authored-By` for AI tools. Example for Claude Code: `Assisted-by: Claude Code <noreply@anthropic.com>`
 
 ### Cross-Component Changes
 
-When a feature spans repos, merge in dependency order:
-1. `fulfillment-service` (proto definitions)
-2. `osac-operator` (CRD types, controllers)
-3. `osac-aap` (Ansible roles/playbooks)
-4. `osac-installer` (submodules, deployment manifests)
+`fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`,
+`bare-metal-fulfillment-operator`, and `osac-csi-driver` all live in one
+mono-repo (`osac/`) — a feature spanning any of them (proto definitions,
+CRD types, Ansible roles/playbooks, Helm values) lands in a single branch
+and PR there.
 
-Link PRs in descriptions: "Depends on fulfillment-service#123".
+Link PRs in descriptions: "Depends on osac-project/osac#123".
 
 ## Deployment Coordination
 
-`osac-installer/scripts/setup.sh` pins component versions (AAP collections, fulfillment-service images) via submodule refs. When making changes that cross component boundaries, always update `osac-installer` to match:
+`osac/osac-installer/scripts/sync-image-tags.sh` computes each component's
+current SHA-based image tag and writes it into the Helm values files.
+Because `fulfillment-service`, `osac-operator`, `osac-aap`, and
+`bare-metal-fulfillment-operator` now live in the same mono-repo as
+`osac-installer` itself, they all publish SHA-tagged images off one shared
+commit — a change to any of them no longer needs a separate cross-repo
+image-tag bump; run `sync-image-tags.sh` (or `--fix` to auto-correct) in
+the same PR if it touches those values files directly. What still needs an
+explicit update:
 
-- **Proto field additions** in `fulfillment-service` → update CI overlays in `osac-installer` to use the new image version
-- **New AAP roles or collections** in `osac-aap` → bump the submodule ref in `osac-installer`
-- **New CRD types** in `osac-operator` → register in the fulfillment-service reconciler
+- **New CRD types** in `osac-operator` → register in the `fulfillment-service` reconciler (an in-repo change, same PR)
+- **`osac-ui`** → a real external dependency (OCI chart + image, version-tagged), bumped deliberately when a new release is needed
+- **`osac-csi-driver`** → also an in-repo component now (no more git submodules exist anywhere in `osac`), but `sync-image-tags.sh` doesn't cover its image tag yet — bump the `csiDriver`/`csiBackends` image tags in the values files by hand until that script is updated
 
-Failing to update `osac-installer` after cross-component changes causes CI failures and deployment mismatches. See `reference/CONVENTIONS.md` for the full cross-repo dependency table.
+See `reference/CONVENTIONS.md` for the full dependency table (regenerated via the repo-intel tooling, not hand-edited).
 
 ## Enhancement Proposals
 
@@ -139,20 +152,20 @@ When publishing PRDs and design documents to the enhancement-proposals repo:
 
 ### Fork-Based Workflow
 
-Push to the `fork` remote in the enhancement-proposals repo, not `origin`. PRs go from `fork/<branch>` to `origin/main`.
+Resolve remotes with `tools/resolve-remotes.sh`. Push to `$PUSH_REMOTE`, never to `$UPSTREAM_REMOTE`.
 
 ### Feature Dimensions Context
 
 Both PRD and design ingest phases must read all files in `.design/context/`:
 
-- **`osac-dimensions.md`** — Cross-cutting dimensions (services, personas, tenant onboarding, inventory, provisioning, networking, storage, installation, E2E testing, documentation, UI) that every OSAC feature must address. Use it to guide clarifying questions during PRD clarify and persona/user-story scope during PRD draft (see Personas and `osac-docs/personas.md`); ensure the design covers all relevant dimensions.
+- **`osac-dimensions.md`** — Cross-cutting dimensions (services, personas, tenant onboarding, inventory, provisioning, networking, storage, installation, E2E testing, documentation, UI) that OSAC features should address where relevant — see `osac-dimensions.md`'s own triage rule for which dimensions apply to a given feature. Use it to guide clarifying questions during PRD clarify and persona/user-story scope during PRD draft (see Personas and `osac-docs/personas.md`); ensure the design covers the dimensions that actually apply.
 - **`review-patterns.md`** — Common design reviewer feedback themes, anti-patterns, and the design reference library. Use during PRD draft and design draft to anticipate reviewer expectations.
 
 ### Component Conventions
 
 Design and implement ingest phases must read the `AGENTS.md` of each component repo affected by the feature — authoritative on API design, database patterns, testing, and build tooling; the generic workspace rules summarize but don't replace them.
 
-For features involving the fulfillment-service API (proto definitions, services, request/response patterns), `fulfillment-service/AGENTS.md` points to [`fulfillment-service/docs/API.md`](fulfillment-service/docs/API.md) — the canonical API design guidelines. Read it before drafting or reviewing proto schemas.
+For features involving the fulfillment-service API (proto definitions, services, request/response patterns), `osac/fulfillment-service/AGENTS.md` points to [`osac/fulfillment-service/docs/API.md`](osac/fulfillment-service/docs/API.md) — the canonical API design guidelines. Read it before drafting or reviewing proto schemas.
 
 ### Template Overrides
 
@@ -239,7 +252,7 @@ OSAC skills are workspace operators, not isolated skill bundles:
 |----------------|--------|---------|
 | File inside the skill directory | Markdown link ([Agent Skills spec](https://agentskills.io/specification)) | `[preflight.md](steps/preflight.md)` |
 | Path at workspace repo root | Backtick path, not a markdown link | `` `presentations/themes/redhat.css` `` |
-| Component or external doc | Backtick path or full URL | `` `fulfillment-service/docs/API.md` `` |
+| Component or external doc | Backtick path or full URL | `` `osac/fulfillment-service/docs/API.md` `` |
 | User-input markers in examples | Backtick the marker | `` `TODO:` `` in meeting notes (not bare `TODO` in headings) |
 | Bad examples in calibration text | Backtick the quoted phrase | `` `handle edge cases appropriately` `` |
 
@@ -248,14 +261,17 @@ Put `CRITICAL` / `IMPORTANT` rules in the first 20% of `SKILL.md` (skillsaw `con
 ## Architecture
 
 ```text
-fulfillment-service    gRPC/REST API server, PostgreSQL, resource lifecycle
-osac-operator          Kubernetes operator, provisions via AAP + Hosted Control Planes
-osac-aap               Ansible playbooks for infrastructure provisioning
-osac-installer         Helm charts + Kustomize overlays, deploys all components to OpenShift
-osac-test-infra        E2E test playbooks against fulfillment-service gRPC API
-osac-ui                Web console (React, PatternFly 6, pnpm workspace)
-enhancement-proposals  Design documents and RFCs
-osac-docs              Architecture docs and guides
+osac/                              Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator + osac-csi-driver
+  fulfillment-service              gRPC/REST API server, PostgreSQL, resource lifecycle
+  osac-operator                    Kubernetes operator, provisions via AAP + Hosted Control Planes
+  osac-aap                         Ansible playbooks for infrastructure provisioning
+  osac-installer                   Helm charts, deploys all components to OpenShift
+  bare-metal-fulfillment-operator  Kubernetes operator for bare metal fulfillment
+  osac-csi-driver                  CSI storage driver, routes to vendor backends via storage tiers
+osac-test-infra                    E2E test playbooks against fulfillment-service gRPC API
+osac-ui                            Web console (React, PatternFly 6, pnpm workspace)
+enhancement-proposals              Design documents and RFCs
+osac-docs                          Architecture docs and guides
 ```
 
 ### Resource Hierarchy
@@ -267,9 +283,7 @@ VirtualNetwork → L2 network with CIDR (child of NetworkClass)
   ├── Subnet → CIDR range within VirtualNetwork
   └── SecurityGroup → firewall rules
 ComputeInstance → KubeVirt VM, attached to Subnets + SecurityGroups
-PublicIPPool → IP address ranges
-  ├── PublicIP → allocated from pool
-  └── PublicIPAttachment → binds PublicIP to ComputeInstance
+NatGateway → child of VirtualNetwork, SNATs egress traffic through an ExternalIP
 ExternalIPPool → external IP address ranges
   ├── ExternalIP → allocated from pool
   └── ExternalIPAttachment → binds ExternalIP to ComputeInstance
@@ -281,7 +295,7 @@ The osac-operator uses controller-runtime to reconcile OSAC custom resources on 
 
 - **All controllers follow the same reconciliation pattern**: finalizer → status update → provisioning/deprovisioning lifecycle
 - **Shared provisioning lifecycle**: Controllers use `provisioning.RunProvisioningLifecycle()` for provision and manual deprovision handling
-- **CRD types**: ClusterOrder, ComputeInstance, ExternalIP, ExternalIPAttachment, ExternalIPPool, Job, PublicIP, PublicIPAttachment, PublicIPPool, SecurityGroup, Subnet, Tenant, VirtualNetwork
+- **CRD types**: ClusterOrder, ComputeInstance, ExternalIP, ExternalIPAttachment, ExternalIPPool, Job, NatGateway, SecurityGroup, Subnet, Tenant, VirtualNetwork
 - **Multi-cluster support**: Controllers use `multicluster-runtime` for management/workload cluster separation
 - **Management-state annotation**: All controllers should check `osac.openshift.io/management-state` and skip reconciliation when set to `Unmanaged`
 - **Namespace isolation**: Networking controllers filter to a configured namespace via `NetworkingNamespacePredicate`
@@ -290,7 +304,8 @@ When fixing bugs or adding features, **check all controllers** that follow the s
 
 ## UI Reference (osac-ux)
 
-`osac-ux/` is cloned read-only from [osac-project/osac-ux](https://github.com/osac-project/osac-ux) — no `fork` remote, no PRs from backend workflow sessions.
+`osac-ux/` is cloned read-only from [osac-project/osac-ux](https://github.com/osac-project/osac-ux).
+No PRs are created against it from backend workflow sessions (no push remote configured).
 
 ### What to read during /design:research and /implement:ingest
 
@@ -317,7 +332,7 @@ backend has not yet returned — these are real requirements, not speculation.
 
 Run `cd osac-ux && node scripts/gen-api-diff.mjs` to surface API gaps against the current UI.
 
-## Common Fix Locations (fulfillment-service)
+## Common Fix Locations (osac/fulfillment-service)
 
 | Bug pattern | File(s) to check |
 |-------------|-----------------|
@@ -327,10 +342,23 @@ Run `cd osac-ux && node scripts/gen-api-diff.mjs` to surface API gaps against th
 
 ## OpenShift Deployment
 
+The Kustomize `manifests/` directory was removed from `fulfillment-service` — Helm is
+now the only supported deployment method, and installation requires cert-manager, a
+PostgreSQL operator, and Keycloak to be set up first. See
+[`osac/fulfillment-service/docs/INSTALL.md`](osac/fulfillment-service/docs/INSTALL.md)
+for the full OpenShift installation guide (that guide's first step is enabling HTTP/2,
+shown below).
+
 ```bash
-kubectl annotate ingresses.config/cluster ingress.operator.openshift.io/default-enable-http2=true
-kubectl apply -k fulfillment-service/manifests
-export token=$(kubectl create token -n osac client)
-export route=$(kubectl get route -n osac fulfillment-api -o json | jq -r '.spec.host')
-grpcurl -insecure -H "Authorization: Bearer ${token}" ${route}:443 osac.public.v1.VirtualNetworks/List
+oc annotate ingresses.config.openshift.io cluster ingress.operator.openshift.io/default-enable-http2=true
+```
+
+Once deployed, verify with the `osac` CLI (see INSTALL.md's "Verify the installation" for the full
+sequence, including extracting the CA bundle):
+
+```bash
+osac login --ca-file bundle.pem --flow credentials --client-id osac-admin \
+  --client-secret "${OSAC_ADMIN_CLIENT_SECRET}" --private \
+  https://fulfillment-internal-api-osac.${DOMAIN}
+osac get clusters
 ```

@@ -1,6 +1,6 @@
 # CLI UX Guidelines
 
-The OSAC CLI (`fulfillment-service/internal/cmd/cli/`) is a tenant-facing tool for managing infrastructure resources. It is NOT a Kubernetes admin tool - end users should not need to know k8s.
+The OSAC CLI (`osac/fulfillment-service/internal/cmd/cli/`) is a tenant-facing tool for managing infrastructure resources. It is NOT a Kubernetes admin tool - end users should not need to know k8s.
 
 ## Design Inspiration
 

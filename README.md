@@ -38,26 +38,27 @@ cd osac-workspace
 ./bootstrap.sh --no-fork
 ```
 
-The bootstrap script clones all OSAC repos into the workspace. Each repo is an independent Git repository on its `main` branch with remotes configured as:
-- `origin` = osac-project (upstream source, PR target)
-- `fork` = your GitHub fork (push target for feature branches)
+The bootstrap script clones all OSAC repos into the workspace. Each repo is an independent Git repository on its `main` branch. By default, remotes are named `origin` (upstream) and `fork` (push target). Use `--fork-name <name>` to choose a different push remote name (e.g., `--fork-name origin` for the conventional layout where `origin` is your fork and `upstream` is the project repo).
 
-Use `--no-fork` if you only need read-only access or are running in CI.
+`tools/resolve-remotes.sh` detects remotes by URL, so all skills and hooks work regardless of naming.
+
+Use `--no-fork` if you only need read-only access or are running in CI. To override fork repo names (e.g., if your fork of `docs` is named `osac-docs`), copy `fork-overrides.sh.example` to `fork-overrides.sh` and edit it.
 
 ## Components
 
-| Repository | Description |
-|------------|-------------|
-| [fulfillment-service](https://github.com/osac-project/fulfillment-service) | gRPC/REST API server with PostgreSQL backend — manages VirtualNetworks, Subnets, SecurityGroups, ComputeInstances |
-| [osac-operator](https://github.com/osac-project/osac-operator) | Kubernetes operator for deploying OpenShift clusters via Hosted Control Planes |
-| [osac-aap](https://github.com/osac-project/osac-aap) | Ansible Automation Platform roles and playbooks for VM and network provisioning |
-| [osac-installer](https://github.com/osac-project/osac-installer) | Installation manifests, prerequisites, and demo scripts |
+| Component | Description |
+|-----------|-------------|
+| [osac](https://github.com/osac-project/osac) | Mono-repo: fulfillment-service + osac-operator + osac-aap + osac-installer + bare-metal-fulfillment-operator + osac-csi-driver (see subdirectories below) |
+| `osac/fulfillment-service` | gRPC/REST API server with PostgreSQL backend — manages VirtualNetworks, Subnets, SecurityGroups, ComputeInstances |
+| `osac/osac-operator` | Kubernetes operator for deploying OpenShift clusters via Hosted Control Planes |
+| `osac/osac-aap` | Ansible Automation Platform roles and playbooks for VM and network provisioning |
+| `osac/osac-installer` | Installation manifests, prerequisites, and demo scripts |
+| `osac/bare-metal-fulfillment-operator` | Kubernetes operator for bare metal fulfillment |
+| `osac/osac-csi-driver` | CSI storage driver, routes to vendor backends via fulfillment-service storage tiers |
 | [osac-test-infra](https://github.com/osac-project/osac-test-infra) | Integration testing infrastructure |
 | [osac-ui](https://github.com/osac-project/osac-ui) | OSAC UI web console for managing cloud resources |
 | [enhancement-proposals](https://github.com/osac-project/enhancement-proposals) | Design documents and enhancement proposals |
 | [docs](https://github.com/osac-project/docs)[^1] | Architecture documentation, diagrams, and design guides |
-| [host-management-openstack](https://github.com/osac-project/host-management-openstack) | Bare metal host management via OpenStack |
-| [bare-metal-fulfillment-operator](https://github.com/osac-project/bare-metal-fulfillment-operator) | Kubernetes operator for bare metal fulfillment |
 
 [^1]: Cloned into a subdirectory as `osac-docs`
 
@@ -165,9 +166,9 @@ git worktree remove ../osac-workspace-storage-qos
 
 ```bash
 # Build and test fulfillment-service
-cd fulfillment-service
-go build
-ginkgo run -r
+cd osac/fulfillment-service
+go build ./...
+ginkgo run -r internal
 
 # Test API against a running cluster
 export KUBECONFIG=./kubeconfig
