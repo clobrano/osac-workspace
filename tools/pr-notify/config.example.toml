@@ -5,6 +5,7 @@ description = "Live view of open pull requests across all OSAC component repos, 
 repos = [
     "osac-project/osac",
     "osac-project/osac-ui",
+    "osac-project/osac-test-infra",
     "osac-project/enhancement-proposals",
 ]
 

@@ -12,7 +12,9 @@ header{margin-bottom:24px}
 header h1{font-size:1.5rem;color:#151515}
 header .updated{color:#6a6e73;font-size:.85rem}
 .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
-.card{background:#fff;border-radius:8px;padding:16px 20px;min-width:120px;flex:1;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.card{background:#fff;border-radius:8px;padding:16px 20px;min-width:120px;flex:1;box-shadow:0 1px 3px rgba(0,0,0,.1);cursor:pointer;transition:opacity .15s}
+.card.active{opacity:1;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.card.dimmed{opacity:.4}
 .card-num{font-size:1.8rem;font-weight:700}
 .card-label{font-size:.85rem;color:#6a6e73}
 section{margin-bottom:32px}
@@ -105,27 +107,70 @@ function checkRunRows(checks) {
 }
 
 function renderCards(summary) {
-  const cards = [
-    ["Needs Review", summary.needs_review, "#f0ab00"],
-    ["CI Failing", summary.ci_failing, "#c9190b"],
-    ["Conflicts", summary.conflicts || 0, "#8a6d3b"],
-    ["Stale (7+ days)", summary.stale, "#6a6e73"],
-    ["Approved", summary.approved, "#3e8635"],
-    ["Draft", summary.draft, "#6a6e73"]
+  var cards = [
+    ["Needs Review", summary.needs_review, "#f0ab00", "needs_review,needs_re_review"],
+    ["CI Failing", summary.ci_failing, "#c9190b", "ci_failing"],
+    ["Conflicts", summary.conflicts || 0, "#8a6d3b", "conflicts"],
+    ["Stale (7+ days)", summary.stale, "#6a6e73", "stale"],
+    ["Approved", summary.approved, "#3e8635", "approved"],
+    ["Draft", summary.draft, "#6a6e73", "draft"]
   ];
   return '<div class="cards">' + cards.map(function(c) {
-    return '<div class="card" style="border-top:4px solid ' + c[2] + '">' +
+    return '<div class="card" data-filter="' + c[3] + '" style="border-top:4px solid ' + c[2] + '">' +
       '<div class="card-num">' + c[1] + '</div><div class="card-label">' + esc(c[0]) + "</div></div>";
   }).join("\n") + "</div>";
 }
 
-function renderRepo(repo) {
-  var actionable = repo.prs.filter(function(pr) {
-    return pr.status !== "draft" && pr.status !== "approved";
-  });
-  if (!actionable.length) return "";
+function setupCardFilters() {
+  var activeFilter = null;
+  document.querySelectorAll(".card[data-filter]").forEach(function(card) {
+    card.addEventListener("click", function() {
+      var filter = card.getAttribute("data-filter").split(",");
+      var isStale = filter[0] === "stale";
 
-  var rows = actionable.map(function(pr) {
+      if (activeFilter === card) {
+        activeFilter = null;
+        document.querySelectorAll(".card[data-filter]").forEach(function(c) { c.classList.remove("active", "dimmed"); });
+        document.querySelectorAll(".pr-table tbody tr").forEach(function(r) { r.style.display = ""; });
+        document.querySelectorAll("section").forEach(function(s) { s.style.display = ""; });
+        return;
+      }
+
+      activeFilter = card;
+      document.querySelectorAll(".card[data-filter]").forEach(function(c) {
+        c.classList.toggle("active", c === card);
+        c.classList.toggle("dimmed", c !== card);
+      });
+
+      document.querySelectorAll(".pr-table").forEach(function(table) {
+        var rows = table.querySelectorAll("tbody tr");
+        var visibleCount = 0;
+        rows.forEach(function(row) {
+          var badge = row.querySelector(".badge");
+          if (!badge) { row.style.display = "none"; return; }
+          var status = badge.textContent.trim().toLowerCase().replace(/ /g, "_");
+          var statusKey = Object.keys(STATUS_LABELS).find(function(k) { return STATUS_LABELS[k] === badge.textContent.trim().toLowerCase(); }) || status;
+          var show = false;
+          if (isStale) {
+            var ageCell = row.querySelector(".age-stale");
+            show = ageCell !== null;
+          } else {
+            show = filter.indexOf(statusKey) !== -1;
+          }
+          row.style.display = show ? "" : "none";
+          if (show) visibleCount++;
+        });
+        var section = table.closest("section");
+        if (section) section.style.display = visibleCount ? "" : "none";
+      });
+    });
+  });
+}
+
+function renderRepo(repo) {
+  if (!repo.prs.length) return "";
+
+  var rows = repo.prs.map(function(pr) {
     var ageClass = pr.age_days >= 7 ? "age-stale" : "";
     var checksHtml = checkRunRows(pr.check_runs);
     return "<tr>" +
@@ -138,7 +183,7 @@ function renderRepo(repo) {
   });
 
   return "<section>" +
-    '<h2><a href="' + esc(repo.pulls_url) + '">' + esc(repo.name) + "</a> (" + actionable.length + ")</h2>" +
+    '<h2><a href="' + esc(repo.pulls_url) + '">' + esc(repo.name) + "</a> (" + repo.prs.length + ")</h2>" +
     '<table class="pr-table">' +
     "<thead><tr><th>Status</th><th>Title</th><th>Author</th><th>Age</th><th>CI</th></tr></thead>" +
     "<tbody>" + rows.join("") + "</tbody>" +
@@ -175,6 +220,7 @@ function render(data) {
 
   html += renderCIHealth(data.ci_health);
   document.getElementById("content").innerHTML = html;
+  setupCardFilters();
 }
 
 fetch("data.json")
