@@ -44,12 +44,40 @@ default without saying anything. `/implement:publish`'s override passes
 
 ## Prerequisites
 
-- Something exists to review: `git diff $(git merge-base {BASE} HEAD)
-  --name-only` is non-empty, or there are untracked files (`git ls-files
-  --others --exclude-standard` is non-empty). If both are empty, stop and
-  tell the user: "Nothing to review — no difference since this branch
-  diverged from `{BASE}` (committed, staged, or unstaged) and no untracked
-  files, so there's nothing for the review gate to check."
+Resolve the merge-base first — compute it exactly once, here, and reuse
+this same value everywhere else in this skill (Step 1 included):
+
+```bash
+MERGE_BASE=$(git merge-base {BASE} HEAD)
+```
+
+**If this command fails** (`{BASE}` is stale, unfetched, or doesn't exist),
+stop and report the exact git error to the user — do not treat a failed
+lookup as "nothing to review." This is an **INVALID** outcome (see Step 4)
+just like a malformed reviewer output is — the gate itself could not
+complete, which is not the same as it completing and finding nothing.
+Report it the same way Step 4 reports any other INVALID case. This matters
+because of a specific failure mode: written unquoted and inline (`git diff
+$(git merge-base {BASE} HEAD) --name-only`), a failing inner command
+substitutes to an empty string, which the shell then word-splits away
+entirely — collapsing the whole command to plain `git diff --name-only`
+(working tree vs. index only), which exits `0` and typically prints
+nothing on a clean tree. That looks exactly like "nothing to review" and
+silently skips the entire gate right before a push. Assigning to
+`$MERGE_BASE` and always quoting it (`"$MERGE_BASE"`) avoids this — the
+same failing command instead fails loudly with an explicit `fatal:` error,
+because `git diff ""` is a recognizable, invalid argument rather than
+nothing at all.
+
+- Something exists to review: `git diff "$MERGE_BASE" --name-only` is
+  non-empty, or there are untracked files (`git ls-files --others
+  --exclude-standard` is non-empty). If both are empty, report **PASS** —
+  there's no difference since this branch diverged from `{BASE}`
+  (committed, staged, or unstaged) and no untracked files, so there's
+  nothing for the review gate to block on. Still produce the Step 3
+  aggregated report (with "no findings" from both reviewers omitted and
+  "scope was empty" stated explicitly) so callers can distinguish "PASS
+  because nothing to review" from "PASS after reviewing."
 
 ## Severity Vocabulary — the contract both reviewers use
 
@@ -59,7 +87,7 @@ labels — no synonyms (not "blocking", not "high", not "moderate"):
 
 | Label | Meaning | Blocks? |
 |-------|---------|---------|
-| `CRITICAL` | Confirmed, high-confidence problem: real secret, injection, auth/authz bypass, tenant-isolation violation, confirmed data leakage | Yes |
+| `CRITICAL` | Confirmed, high-confidence problem: real secret, injection, auth/authz bypass, tenant-isolation violation, confirmed data leakage, O(n^2)+ on a hot path scaled by user/tenant input, confirmed goroutine/resource leak | Yes |
 | `IMPORTANT` | High-confidence but lower-stakes, or needs more context to be certain it's exploitable: missing pagination at scale, a pattern that's suspicious but not proven | Yes |
 | `ADVISORY` | Style, micro-optimization, or a suggestion — worth raising, not worth gating | No |
 
@@ -69,10 +97,9 @@ free-text severity language — see Step 3.
 ## Step 1: Capture Scope
 
 Not the full repo — and not a raw diff against `{BASE}`'s current tip
-either. Three steps:
+either. Reuse `$MERGE_BASE` from Prerequisites — do not recompute it here:
 
 ```bash
-MERGE_BASE=$(git merge-base {BASE} HEAD)
 git diff "$MERGE_BASE" --name-only
 git diff "$MERGE_BASE"
 git ls-files --others --exclude-standard
@@ -137,9 +164,7 @@ what's being reviewed.
 ## Step 2: Run Reviewers — in order, not parallel, never short-circuited
 
 Run `performance-review` **first**, then `security-review` **last**.
-Security is the more critical, final gate — it should be the last thing
-checked, closest to push, evaluating the diff after any changes the
-performance pass may have prompted.
+Security is the more critical gate — it runs last, closest to push.
 
 **How to invoke a reviewer:** read `../performance-review/SKILL.md` (or
 `../security-review/SKILL.md`) with the `Read` tool and follow it exactly,
@@ -167,8 +192,8 @@ but stale verdict.
    already found blocking issues — do not treat step 1's findings as a
    reason to stop here.
 
-Do not decide PASS/BLOCKED anywhere in this step. That happens only in
-Step 4, after both reviewers above have run.
+Do not decide the verdict (PASS, BLOCKED, or INVALID) anywhere in this
+step. That happens only in Step 4, after both reviewers above have run.
 
 This list is deliberately ordered and extensible — if a third reviewer is
 added later (for example, a local CodeRabbit pass), it slots in at an
@@ -221,8 +246,10 @@ Once both outputs validate, merge them into one, in this shape:
 
 ## Step 4: Gate Decision
 
-This is the only step where PASS/BLOCKED is decided — and only after both
-reviewers in Step 2 have completed and Step 3 has aggregated their output.
+This is where the verdict (PASS, BLOCKED, or INVALID) is formally decided
+— after both reviewers in Step 2 have completed and Step 3 has aggregated
+their output. The one exception is Prerequisites: if `git merge-base`
+fails there, it short-circuits to INVALID before Step 1 ever runs.
 
 - **PASS** — both reviewer outputs validated in Step 3, and every finding
   is `ADVISORY` or absent. Report the result and continue (if called from
@@ -233,13 +260,17 @@ reviewers in Step 2 have completed and Step 3 has aggregated their output.
   report. Do not proceed to push or PR creation. The only next action is
   fixing the flagged issues (in the working tree, staged, or via a new
   commit — never amend an existing one) and re-running this gate.
-- **INVALID** — Step 3's validation failed for either reviewer (missing,
-  empty, or malformed output). Stop. This is not the same as PASS or
-  BLOCKED — treat it exactly like BLOCKED for the purpose of not
-  proceeding to push, but report it distinctly: name which reviewer's
-  output failed validation and why. The next action is re-reading that
-  reviewer's `SKILL.md` and re-running it against the same scope from
-  Step 1 — not fixing code, since there may be no real findings yet to fix.
+- **INVALID** — the gate itself could not complete, for either of two
+  reasons: Prerequisites' `git merge-base` failed (Step 1 scope capture
+  never happened), or Step 3's validation failed for either reviewer
+  (missing, empty, or malformed output). Stop. This is not the same as
+  PASS or BLOCKED — treat it exactly like BLOCKED for the purpose of not
+  proceeding to push, but report it distinctly: name what failed (the
+  merge-base lookup, or which reviewer's output) and why. The next action
+  matches the failure: re-check `{BASE}` and retry Prerequisites, or
+  re-read the failed reviewer's `SKILL.md` and re-run it against the same
+  scope from Step 1 — not fixing code, since there may be no real findings
+  yet to fix.
 
 ## Output
 

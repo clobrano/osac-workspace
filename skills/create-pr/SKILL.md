@@ -91,10 +91,21 @@ Read the component's CLAUDE.md or Makefile for the correct validation sequence.
 
 Analyze the diff to detect production code changes that lack corresponding test changes. This is **advisory only** — it warns but does not block PR creation.
 
-Run:
+Compute the merge-base first — same fail-closed pattern as `review-gate`'s
+Prerequisites:
 
 ```bash
-git diff main..HEAD --name-only --diff-filter=AMR
+MERGE_BASE=$(git merge-base main HEAD)
+```
+
+If this command fails, stop and report the error — do not continue with an
+empty or missing merge-base. Step 1 already validated that `main` exists,
+so a failure here indicates a deeper problem (e.g., unrelated histories).
+
+Then list the changed files:
+
+```bash
+git diff "$MERGE_BASE" --name-only --diff-filter=AMR
 ```
 
 Classify each changed file using the repo-specific rules below:
@@ -157,10 +168,12 @@ here.
 amend — see Red Flags) and re-run this step.
 
 **If the gate reports INVALID:** Stop — treat this the same as BLOCKED for
-the purpose of not pushing. Show which reviewer's output failed validation
-and why. This means a reviewer step produced no usable output, not that
-the code has a confirmed problem — the next action is re-running this step
-(re-reading the failed reviewer's `SKILL.md` fresh), not editing code.
+the purpose of not pushing. Show what failed and why: either the gate's
+own scope-capture (`git merge-base` against `{BASE}`) failed, or a
+reviewer step produced no usable output. Either way, this means the gate
+itself didn't complete, not that the code has a confirmed problem — the
+next action is re-running this step (fixing the `{BASE}`/fetch issue, or
+re-reading the failed reviewer's `SKILL.md` fresh), not editing code.
 
 **If the gate reports PASS:** Continue to Step 5.
 
@@ -251,7 +264,7 @@ If cross-repo PRs exist, remind: "Link related PRs in the description (e.g., 'De
 | 1 | Detect context | Not on main, fork exists, commits ahead |
 | 2 | Run validation | All checks pass |
 | 3 | Check test coverage | Advisory warning (does not block) |
-| 4 | Pre-flight review gate | `review-gate` reports PASS (blocks on critical/important findings) |
+| 4 | Pre-flight review gate | `review-gate` reports PASS (blocks on BLOCKED or INVALID) |
 | 5 | Push to fork | Push succeeds |
 | 6 | Determine title | Jira key included if available |
 | 7 | Create PR | PR created against origin/main |

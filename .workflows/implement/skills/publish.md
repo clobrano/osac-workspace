@@ -12,9 +12,10 @@ create-pr path. See skills/review-gate/SKILL.md for what the gate does.
 
 Forked from ai-workflows implement/skills/publish.md @ 75ae80165985be7040400a8e6429eabff618244c
 (flightctl/ai-workflows, 2026-07-28). Per this repo's override contract
-(CONTRIBUTING.md: "full replacement, self-contained"), this file is a
-complete copy with our one step inserted — everything else is a frozen
-snapshot of that commit, not a live reference to upstream. If flightctl
+(.ai-workflows/CONTRIBUTING.md: "full replacement, self-contained"), this
+file is a complete copy with our one step inserted — everything else
+(except Step 2, which delegates to a live `.ai-workflows/_shared/` recipe)
+is a frozen snapshot of that commit, not a live reference to upstream. If flightctl
 changes the other steps (pre-flight checks, PR templating, metadata, etc.)
 after this date, those changes won't reach this override automatically.
 Worth periodically diffing this file's untouched sections against the
@@ -65,7 +66,20 @@ Verify readiness:
    git log --oneline {local-base}..HEAD
    ```
 
-   If there are no commits ahead of the Local Base, there's nothing to publish.
+   **If this command fails** (exit code non-zero — `{local-base}` doesn't
+   exist locally, was deleted, or was never fetched), stop and report the
+   exact git error to the user. Do not continue to Step 2 or beyond. This
+   is the same class of failure that `review-gate`'s Prerequisites guards
+   against: a stale `{local-base}` recorded in an old plan that no longer
+   resolves. The user needs to either fetch/recreate the ref or update
+   `02-plan.md`'s Branch section before publishing can proceed. Without
+   this guard, Step 3's `review-gate` invocation would fail later at its
+   own `git merge-base {local-base} HEAD` — catching the same stale ref,
+   but only after the cross-cutting review in Step 2 has already run
+   against a possibly-wrong scope, wasting time.
+
+   If the command succeeds but produces no output, there are no commits
+   ahead of the Local Base — there's nothing to publish.
 
 3. Check for uncommitted changes:
 
@@ -94,8 +108,8 @@ upstream `publish.md` this was forked from uses a relative path
 (`../../_shared/recipes/...`) because it lives inside the `ai-workflows`
 directory tree; this override lives at `.workflows/implement/skills/`
 instead (outside that tree, per the override convention), so the same
-relative path wouldn't resolve — it would look for `_shared/` at the
-workspace root, which doesn't exist there. Use these parameters:
+relative path wouldn't resolve — it would land at
+`.workflows/_shared/recipes/`, which doesn't exist. Use these parameters:
 
 | Parameter | Value |
 |-----------|-------|
@@ -144,14 +158,17 @@ Step 2 just committed, with no extra wiring needed, and stays correct even
 if `{local-base}` itself has moved since this branch was cut.
 
 **If the gate reports BLOCKED:** Stop. Show the full aggregated report from
-`review-gate`. Do not push. Fix the flagged issues, commit them, and
-re-run this step.
+`review-gate`. Do not push. Fix the flagged issues in a new commit (never
+amend — see `create-pr`'s Red Flags) and re-run this step.
 
 **If the gate reports INVALID:** Stop — treat this the same as BLOCKED for
-the purpose of not pushing. Show which reviewer's output failed validation
-and why. This means a reviewer step produced no usable output, not that
-the code has a confirmed problem — the next action is re-running this step
-(re-reading the failed reviewer's `SKILL.md` fresh), not editing code.
+the purpose of not pushing. Show what failed and why: either the gate's
+own scope-capture (`git merge-base` against `{local-base}`) failed, or a
+reviewer step produced no usable output. Either way, this means the gate
+itself didn't complete, not that the code has a confirmed problem — the
+next action is re-running this step (fixing the `{local-base}`/fetch
+issue, or re-reading the failed reviewer's `SKILL.md` fresh), not editing
+code.
 
 **If the gate reports PASS:** Continue to Step 4.
 
@@ -176,12 +193,11 @@ Confirm with the user before proceeding.
 ### Step 5: Push Branch
 
 Check the **Repository Topology** section of `01-context.md` to confirm
-this is a fork-based workflow. AGENTS.md's fork-only policy is
-unconditional for OSAC — `origin` is always the read-only upstream, `fork`
-is always the push target, with no direct-clone exception. Unlike Step 7
-below (which only creates a PR and doesn't push), this step performs an
-actual push, so getting the remote wrong here means writing to a remote
-OSAC policy says never to write to.
+this is a fork-based workflow. OSAC's convention is fork-based — `origin`
+is the read-only upstream, `fork` is the push target — and every OSAC repo
+is expected to follow it. Unlike Step 7 below (which only creates a PR and
+doesn't push), this step performs an actual push, so getting the remote
+wrong here means writing to a remote OSAC policy says never to write to.
 
 **If the repo is a fork:**
 
@@ -190,12 +206,19 @@ git push -u fork {branch-name}
 ```
 
 **If the repo is not a fork** (Repository Topology says direct clone, or
-the `fork` remote doesn't exist): **stop.** Do not fall back to
-`git push -u origin` — report to the user that the repository topology
-doesn't match OSAC's fork-based convention and ask them to confirm the
-correct remote before pushing anything. A misread or misconfigured
-topology should block the push, not silently redirect it to the one
-remote OSAC's own rules forbid pushing to.
+the `fork` remote doesn't exist): **stop before pushing anything.** Do not
+default to `git push -u origin` — a misread or misconfigured topology
+should block the push, not silently redirect it to the one remote OSAC's
+own rules forbid pushing to. Report the discrepancy to the user and ask
+them to confirm it's genuinely correct, not a detection error. If they
+confirm this repo really is a direct clone, push to `origin` only after
+that explicit confirmation, never as an automatic fallback:
+
+```bash
+git push -u origin {branch-name}
+```
+
+Steps 7 and 8 below already support the direct-clone PR creation case.
 
 ### Step 6: Create PR Description
 

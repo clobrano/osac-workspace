@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Adversarial security review of a branch's changes before PR submission. Scans everything changed since diverging from main (committed, staged, and unstaged, via merge-base) for RBAC/authz issues, injection, data exposure, permission-manifest widening, embedded secrets, prompt-injection patterns, and OSAC-specific policy violations (tenant isolation, multi-tenancy). Use standalone before opening a PR, or via the review-gate skill as part of create-pr's pre-flight gate. Adapted from a production multi-agent review pipeline's security dimension.
+description: Adversarial security review of a branch's changes before PR submission. Scans everything changed since diverging from a base ref (main by default, committed, staged, and unstaged, via merge-base) for RBAC/authz issues, injection, data exposure, permission-manifest widening, embedded secrets, prompt-injection patterns, and OSAC-specific policy violations (tenant isolation, multi-tenancy). Use standalone before opening a PR, or via the review-gate skill as part of create-pr's pre-flight gate. Adapted from a production multi-agent review pipeline's security dimension.
 allowed-tools: Read, Grep, Bash, Glob
 ---
 
@@ -39,25 +39,36 @@ a substitute for it.
 
 ## Scope
 
-Review **everything this branch has changed since diverging from `main`**,
-plus any untracked files — whether committed, staged, unstaged, or never
-staged at all — not the full repo. Pull in enough surrounding context to
-evaluate the diff honestly: call sites, the auth/tenancy model it operates
-under, and any config, proto, or schema it touches. Don't limit yourself to
-the changed lines if the risk depends on how they're called.
+Review **everything this branch has changed since diverging from `{BASE}`**
+(`{BASE}` is `main` by default — see below), plus any untracked files —
+whether committed, staged, unstaged, or never staged at all — not the full
+repo. Pull in enough surrounding context to evaluate the diff honestly:
+call sites, the auth/tenancy model it operates under, and any config,
+proto, or schema it touches. Don't limit yourself to the changed lines if
+the risk depends on how they're called.
 
 ```bash
-MERGE_BASE=$(git merge-base main HEAD)
+MERGE_BASE=$(git merge-base {BASE} HEAD)
 git diff "$MERGE_BASE" --name-only
 git diff "$MERGE_BASE"
 git ls-files --others --exclude-standard
 ```
 
-Diff from the merge-base, not from `main` directly — `main` moves
-constantly, and a raw `git diff main` would pull in whatever `main` gained
-after this branch diverged, indistinguishable from changes this branch
-actually made. `git diff "$MERGE_BASE"` isolates exactly what this branch
-changed, regardless of `main`'s later history.
+**If `git merge-base` fails** (`{BASE}` stale, unfetched, or doesn't
+exist), stop and report the exact git error — don't treat a failed lookup
+as nothing to review.
+
+**Set `{BASE}` yourself if this branch is stacked on another** (not
+directly on `main`) and you're running this standalone — otherwise the
+merge-base lands on where the *parent* branch diverged from `main`,
+pulling the parent's entire contents into scope. Default to `main` in
+every other case.
+
+Diff from the merge-base, not from `{BASE}` directly — `{BASE}` moves
+constantly (especially `main`), and a raw `git diff {BASE}` would pull in
+whatever `{BASE}` gained after this branch diverged, indistinguishable
+from changes this branch actually made. `git diff "$MERGE_BASE"` isolates
+exactly what this branch changed, regardless of `{BASE}`'s later history.
 
 `git diff` alone misses untracked files — a brand-new file that's never
 been `git add`-ed produces no diff output. A hardcoded secret in a file
@@ -130,7 +141,7 @@ passes it to both reviewers so they agree on exactly what's in scope.
 
 Tag every finding with exactly one of these three labels — this is a shared
 contract with `performance-review` and `review-gate`'s PASS/BLOCKED logic,
-not a local convention. No synonyms (not "blocking", not "high").
+not a local convention. No synonyms (not "blocking", not "high", not "moderate").
 
 - **`CRITICAL`** — real secrets, injection, auth/authz bypass, confirmed
   privilege escalation, confirmed tenant-isolation or cross-tenant data
