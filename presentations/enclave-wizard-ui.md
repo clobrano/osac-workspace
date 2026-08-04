@@ -94,9 +94,9 @@ Adding a new field to the Wizard starts with a schema change in `osac-installer`
 
 ## Schema → UI Control Mapping
 
-The JSON Schema type determines which control the Wizard renders:
+The JSON Schema construct determines which control the Wizard renders:
 
-| Schema type | UI control | Example |
+| Schema construct | UI control | Example |
 |-------------|-----------|---------|
 | `enum` | Dropdown | DNS provider: `route53`, `infoblox` |
 | `boolean` | Checkbox | Enable bundled PostgreSQL |

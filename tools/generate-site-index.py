@@ -31,7 +31,10 @@ def parse_frontmatter(path):
     for line in block.group(1).splitlines():
         kv = re.match(r"^(\w[\w-]*):\s*(.+)$", line)
         if kv:
-            fields[kv.group(1)] = kv.group(2).strip()
+            value = kv.group(2).strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+                value = value[1:-1]
+            fields[kv.group(1)] = value
     return fields
 
 
