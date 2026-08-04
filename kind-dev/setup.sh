@@ -12,8 +12,12 @@ set -euo pipefail
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 REAL_SCRIPT="${SCRIPT_DIR}/../osac/kind-dev/setup.sh"
 
-if [[ ! -x "${REAL_SCRIPT}" ]]; then
+if [[ ! -f "${REAL_SCRIPT}" ]]; then
   echo "osac/kind-dev/setup.sh not found -- run ./bootstrap.sh to clone osac first." >&2
+  exit 1
+fi
+if [[ ! -x "${REAL_SCRIPT}" ]]; then
+  echo "osac/kind-dev/setup.sh is not executable -- run: chmod +x osac/kind-dev/setup.sh" >&2
   exit 1
 fi
 
