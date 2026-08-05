@@ -179,6 +179,10 @@ is_expected_clone() {
   return 1
 }
 
+# Prints the remote name whose URL matches osac-project/<repo> and returns 0,
+# or returns 1 with no output if none match. Callers must check the exit
+# status -- don't assume a match (e.g. "origin") when none was found, since a
+# clone's origin can point to a fork or be missing entirely.
 find_upstream_remote() {
   local dir="$1" repo="$2"
   local expected_suffix="${GITHUB_ORG}/${repo}"
@@ -187,10 +191,30 @@ find_upstream_remote() {
     url=$(git -C "$dir" remote get-url "$remote" 2>/dev/null) || continue
     if [[ "${url%.git}" == *"$expected_suffix" ]]; then
       echo "$remote"
-      return
+      return 0
     fi
   done
-  echo "origin"
+  return 1
+}
+
+# Returns 0 if every configured push URL for $remote in $dir end-anchor
+# matches $expected_suffix, 1 otherwise (including if the remote doesn't
+# exist or has no push URL at all). Checks push URLs specifically, not the
+# fetch URL `git remote get-url` returns by default -- `git remote set-url
+# --push` can point pushes at a completely different repo while the fetch
+# URL still looks correct, so a fetch-URL-only check can't be trusted to
+# mean "safe to push to as-is". Checks --all push URLs since `--push --add`
+# allows configuring more than one.
+fork_remote_push_matches() {
+  local dir="$1" remote="$2" expected_suffix="$3"
+  local push_urls
+  push_urls=$(git -C "$dir" remote get-url --push --all "$remote" 2>/dev/null) || return 1
+  [ -n "$push_urls" ] || return 1
+  local push_url
+  while IFS= read -r push_url; do
+    [[ "${push_url%.git}" == *"$expected_suffix" ]] || return 1
+  done <<< "$push_urls"
+  return 0
 }
 
 # Moves (never deletes) a stale standalone clone of a now-merged component
@@ -237,20 +261,36 @@ for entry in "${REPOS[@]}"; do
   repo="${entry%%:*}"
   dir="${entry#*:}"
   if [ -d "$dir" ] && is_expected_clone "$dir" "$repo"; then
-    upstream_remote=$(find_upstream_remote "$dir" "$repo")
-    echo "📦 Updating $dir..."
-    if ! (cd "$dir" && git fetch "$upstream_remote"); then
-      echo "⚠️  Fetch failed for $dir. Skipping update."
-      UPDATE_WARNINGS=1
-    elif ! (cd "$dir" && git rebase "$upstream_remote/main" --autostash); then
-      (cd "$dir" && git rebase --abort 2>/dev/null || true)
-      echo "⚠️  Rebase failed for $dir (likely local commits conflict with upstream)."
-      echo "   Skipping update — resolve manually with: cd $dir && git rebase $upstream_remote/main"
+    if upstream_remote=$(find_upstream_remote "$dir" "$repo"); then
+      echo "📦 Updating $dir..."
+      if ! (cd "$dir" && git fetch "$upstream_remote"); then
+        echo "⚠️  Fetch failed for $dir. Skipping update."
+        UPDATE_WARNINGS=1
+      elif ! (cd "$dir" && git rebase "$upstream_remote/main" --autostash); then
+        (cd "$dir" && git rebase --abort 2>/dev/null || true)
+        echo "⚠️  Rebase failed for $dir (likely local commits conflict with upstream)."
+        echo "   Skipping update — resolve manually with: cd $dir && git rebase $upstream_remote/main"
+        UPDATE_WARNINGS=1
+      fi
+    else
+      # Unreachable in practice -- is_expected_clone above already confirmed a
+      # matching remote exists, using the same matching logic. Guarded anyway
+      # so a future refactor of either function can't silently reintroduce
+      # the "origin" guess this replaced.
+      echo "⚠️  Could not determine upstream remote for $dir despite passing is_expected_clone. Skipping update."
       UPDATE_WARNINGS=1
     fi
     if [ "$NO_FORK" = false ]; then
-      existing_url=$(git -C "$dir" remote get-url "$FORK_REMOTE_NAME" 2>/dev/null) || existing_url=""
-      if [ -z "$existing_url" ] || [[ "${existing_url%.git}" != *"${GH_USER}/${repo}"* ]]; then
+      # End-anchored, push-URL-aware, FORK_OVERRIDES-aware match (see
+      # fork_remote_push_matches) -- a plain substring-anywhere match on the
+      # fetch URL would both false-positive on any fork URL that merely
+      # contains "$GH_USER/$repo" as part of a longer repo name (e.g.
+      # $repo=osac matching a fork URL for osac-csi-driver) and miss a
+      # diverged push URL, and ignoring FORK_OVERRIDES here (unlike
+      # ensure_fork_remote) would compare against the wrong expected name
+      # for any repo with an override.
+      fork_repo="${FORK_OVERRIDES[$repo]:-$repo}"
+      if ! fork_remote_push_matches "$dir" "$FORK_REMOTE_NAME" "${GH_USER}/${fork_repo}"; then
         echo "🍴 Adding $FORK_REMOTE_NAME remote for existing repo $dir..."
         ensure_fork_remote "$repo" "$dir" || confirm_continue "Fork remote for $repo failed."
       fi
@@ -278,10 +318,13 @@ for entry in "${REFERENCE_REPOS[@]}"; do
   repo="${entry%%:*}"
   dir="${entry#*:}"
   if [ -d "$dir" ] && is_expected_clone "$dir" "$repo"; then
-    upstream_remote=$(find_upstream_remote "$dir" "$repo")
-    echo "📦 Updating $dir (reference)..."
-    (cd "$dir" && git fetch "$upstream_remote" && git rebase "$upstream_remote/main" --autostash) || \
-      echo "⚠️  Update failed for $dir — skipping."
+    if upstream_remote=$(find_upstream_remote "$dir" "$repo"); then
+      echo "📦 Updating $dir (reference)..."
+      (cd "$dir" && git fetch "$upstream_remote" && git rebase "$upstream_remote/main" --autostash) || \
+        echo "⚠️  Update failed for $dir — skipping."
+    else
+      echo "⚠️  Could not determine upstream remote for $dir (reference) — skipping update."
+    fi
   elif [ ! -d "$dir" ]; then
     echo "📥 Cloning $repo (reference, no fork)..."
     git clone "https://github.com/${GITHUB_ORG}/${repo}.git" "$dir"
@@ -372,11 +415,14 @@ for entry in "${REPOS[@]}"; do
   if [ -d "$dir" ]; then
     repo="${entry%%:*}"
     branch=$(git -C "$dir" branch --show-current 2>/dev/null || echo "unknown")
-    upstream_remote=$(find_upstream_remote "$dir" "$repo")
-    upstream_url=$(git -C "$dir" remote get-url "$upstream_remote" 2>/dev/null || echo "not set")
-    fork_url=$(git -C "$dir" remote get-url "$FORK_REMOTE_NAME" 2>/dev/null || echo "not set")
     echo "   $dir (branch: $branch)"
-    echo "     $upstream_remote: $upstream_url"
+    if upstream_remote=$(find_upstream_remote "$dir" "$repo"); then
+      upstream_url=$(git -C "$dir" remote get-url "$upstream_remote" 2>/dev/null || echo "not set")
+      echo "     $upstream_remote: $upstream_url"
+    else
+      echo "     upstream: unknown — no remote matches ${GITHUB_ORG}/${repo}"
+    fi
+    fork_url=$(git -C "$dir" remote get-url "$FORK_REMOTE_NAME" 2>/dev/null || echo "not set")
     if [ "$fork_url" != "not set" ]; then
       echo "     $FORK_REMOTE_NAME: $fork_url"
     fi

@@ -50,6 +50,7 @@ a feature also spans a genuinely separate repo (e.g., `osac` + `osac-test-infra`
 ## Git Workflow
 
 ### Branching
+
 - **Always create a feature branch** for any work — never commit directly to `main`
 - Branch naming: `<type>/<ticket-or-description>` (e.g., `feat/OSAC-23607`, `fix/duplicate-aap-jobs`)
 
@@ -59,12 +60,14 @@ a feature also spans a genuinely separate repo (e.g., `osac` + `osac-test-infra`
 - Run `eval $(tools/resolve-remotes.sh <component-path>)` to resolve `$UPSTREAM_REMOTE` and `$PUSH_REMOTE` dynamically
 
 ### Pushing and PR Submission
+
 - **Always push to `$PUSH_REMOTE`**, never to `$UPSTREAM_REMOTE`
 - PRs go from the push remote's branch to the upstream repo's `main`
 - Always include the Jira ticket key in the PR title (e.g., "OSAC-12345: fix subnet race condition")
 - **Use the `create-pr` skill** (`/create-pr`) to run repo-specific validation, push, and create the PR
 
 ### Commit Conventions
+
 - Sign off all commits with DCO: `git commit -s`
 - Add AI attribution trailer when AI-assisted:
   ```text
