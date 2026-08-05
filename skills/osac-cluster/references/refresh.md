@@ -9,9 +9,9 @@ The snapshot contains a frozen version of OSAC. To apply the latest component im
 ## Prerequisites
 
 `osac-installer` lives inside the `osac` mono-repo (`osac/osac-installer/`), not
-as its own standalone repo. You need the `osac` repo cloned, submodules
-initialized, and up to date — `<path-to-osac-installer>` in the commands
-below refers to the `osac-installer/` subdirectory of that clone:
+as its own standalone repo — no submodules involved. You need the `osac` repo
+cloned and up to date — `<path-to-osac-installer>` in the commands below refers
+to the `osac-installer/` subdirectory of that clone:
 
 ```bash
 git clone https://github.com/osac-project/osac.git
@@ -24,7 +24,6 @@ else
   UPSTREAM_REMOTE=origin
 fi
 git fetch "$UPSTREAM_REMOTE" main && git rebase "$UPSTREAM_REMOTE/main"
-git submodule update --init --recursive
 cd osac-installer
 ```
 

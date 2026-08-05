@@ -192,13 +192,11 @@ When changing one repo, check all dependent repos in this table before submittin
 
 | Change in | Also check | Why |
 |-----------|-----------|-----|
-| `fulfillment-service`, `osac-operator`, `osac-aap`, or `bare-metal-fulfillment-operator` source (any change that bumps its image) | `osac-installer/scripts/sync-image-tags.sh` (or `--fix`) | All components now live in the `osac` mono-repo alongside `osac-installer` and publish SHA-tagged images off one shared commit — no separate cross-repo PR needed, but the Helm values files still need their tag re-synced in the same PR |
 | `osac-operator` CRD types | `fulfillment-service` reconciler registration | New CRD types must be registered in the fulfillment-service reconciler (in-repo change, same PR) |
 | `osac-operator` CRD spec changes | `osac-aap` roles that read CRD fields | Adding a field to `ClusterOrderSpec` requires the AAP playbook to extract and use it |
 | `fulfillment-service` CLI flag changes | `osac-test-infra` test helpers | Adding `--pull-secret-file` required updating `OsacCLI.create_cluster` in the test infra (separate repo, separate PR) |
-| `osac-csi-driver` source (any change that bumps its image) | `osac-installer`'s values files, by hand | Also an in-repo component now (no git submodules remain anywhere in `osac`), but `sync-image-tags.sh` doesn't cover its image tag yet — bump the `csiDriver`/`csiBackends` image tags in the values files manually until that script is updated |
 
-Evidence: MGMT-24226 eval scored 3/5 because the agent fixed `fulfillment-service` and `osac-aap` but missed updating `osac-installer`'s pinned image version — this was pre-mono-repo-merge (OSAC-1739), when these were still separate repos; the underlying failure mode (forgetting to re-sync image tags after a component change) persists today via `sync-image-tags.sh`.
+Evidence: MGMT-24226 eval scored 3/5 because the agent fixed `fulfillment-service` and `osac-aap` but missed updating `osac-installer`'s pinned image version — this was pre-mono-repo-merge (OSAC-1739), when these were still separate repos and image tags were pinned per-commit. That specific mechanism (a separate pinned tag needing a manual re-sync via `sync-image-tags.sh`) no longer exists post-mono-repo — `osac/osac-installer/scripts/sync-image-tags.sh` was removed upstream (`OSAC-3367`) and `osac/osac-installer/values/*/values.yaml` now leaves mono-repo-resident components' image tags unpinned. See the CRD-registration and CLI-flag rows above for what still needs a cross-file check today.
 
 ---
 

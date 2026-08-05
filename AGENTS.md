@@ -115,19 +115,16 @@ Link PRs in descriptions: "Depends on osac-project/osac#123".
 
 ## Deployment Coordination
 
-`osac/osac-installer/scripts/sync-image-tags.sh` computes each component's
-current SHA-based image tag and writes it into the Helm values files.
-Because `fulfillment-service`, `osac-operator`, `osac-aap`, and
-`bare-metal-fulfillment-operator` now live in the same mono-repo as
-`osac-installer` itself, they all publish SHA-tagged images off one shared
-commit — a change to any of them no longer needs a separate cross-repo
-image-tag bump; run `sync-image-tags.sh` (or `--fix` to auto-correct) in
-the same PR if it touches those values files directly. What still needs an
-explicit update:
+`osac-installer`'s `scripts/sync-image-tags.sh` was removed upstream
+(`OSAC-3367`) — there is no image-tag pinning/syncing step left at all.
+`fulfillment-service`, `osac-operator`, `osac-aap`, `bare-metal-fulfillment-operator`,
+and `osac-csi-driver` are all mono-repo-resident: `values/*/values.yaml` leaves their
+image tags unpinned (`latest`), and real release tags are set automatically by `osac`'s
+own CI (`publish-osac-installer-chart.yaml` and each component's tag-triggered image
+workflow) at release time — not by a feature PR. What still needs an explicit update:
 
 - **New CRD types** in `osac-operator` → register in the `fulfillment-service` reconciler (an in-repo change, same PR)
 - **`osac-ui`** → a real external dependency (OCI chart + image, version-tagged), bumped deliberately when a new release is needed
-- **`osac-csi-driver`** → also an in-repo component now (no more git submodules exist anywhere in `osac`), but `sync-image-tags.sh` doesn't cover its image tag yet — bump the `csiDriver`/`csiBackends` image tags in the values files by hand until that script is updated
 
 See `reference/CONVENTIONS.md` for the full dependency table (regenerated via the repo-intel tooling, not hand-edited).
 
@@ -222,6 +219,12 @@ Canonical skill definitions live in `skills/` (committed OSAC skills plus bootst
 | GitHub Copilot | `AGENTS.md` conventions only | — |
 
 `.claude/`, `.cursor/`, and `.gemini/` are gitignored except project settings; bootstrap recreates agent skill symlinks via `tools/link-agent-skills.sh`.
+
+`osac` also has its own root `AGENTS.md`/`tools/bootstrap.sh` upstream (`OSAC-3557`), which
+installs the same ai-workflows skills for someone cloning `osac` standalone, outside this
+workspace. **Don't run `osac/tools/bootstrap.sh` from within `osac-workspace`** — this
+workspace's own `./bootstrap.sh` and skill-linking above already cover `osac/` as a
+component; running both would install two separate, out-of-sync `.ai-workflows` clones.
 
 ### Skillsaw Linting
 
