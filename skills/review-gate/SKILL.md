@@ -2,6 +2,8 @@
 name: review-gate
 description: Local pre-flight review gate that runs performance and security reviews against everything this branch has changed since diverging from a base ref (main by default, via merge-base — not a raw diff against the base's current tip) before PR submission, covering committed, staged, and unstaged changes uniformly. Orchestrates the performance-review and security-review skills in sequence and aggregates their findings into one actionable report. Use standalone before opening a PR, or automatically as a step in create-pr. Blocks on critical/important findings from either reviewer.
 allowed-tools: Read, Grep, Bash, Glob
+metadata:
+  version: "0.1.0"
 ---
 
 # Pre-Flight Review Gate
