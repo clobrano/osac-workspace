@@ -5,7 +5,7 @@ description: Unattended bug fix — creates a Jira bug, fixes it in the backgrou
 
 # Quick Fix Workflow
 
-This skill delegates to the `osac-dev:fix-bug` agent which runs in the background.
+This skill delegates to the `fix-bug` agent which runs in the background.
 
 ## When to Use
 
@@ -30,7 +30,7 @@ Once inputs are gathered, launch the fix-bug agent in the background using the A
 
 ```
 Agent tool call:
-  subagent_type: osac-dev:fix-bug
+  subagent_type: fix-bug
   run_in_background: true
   prompt: |
     Fix this bug end-to-end.
