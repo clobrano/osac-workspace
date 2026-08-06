@@ -2,7 +2,7 @@
 name: report-bug
 description: Report a bug in Jira without fixing it — creates a Bug ticket with proper description, links it to an epic, and assigns it. Use when the user says 'report a bug', 'file a bug', 'log a bug', 'open a bug ticket', or wants to track a bug without immediately writing a fix.
 metadata:
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 # Report Bug
@@ -211,6 +211,7 @@ if [ -z "$KEY" ]; then
   cat "$ERR" >&2
   # Stop here — report the failure to the user and do not proceed with
   # epic linking or attachments.
+  exit 1
 fi
 ```
 
