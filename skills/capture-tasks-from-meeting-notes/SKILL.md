@@ -1,6 +1,8 @@
 ---
 name: capture-tasks-from-meeting-notes
 description: "Analyze meeting notes to find action items and create Jira tasks for assigned work using jira-cli. When an agent needs to: (1) Create Jira tasks or tickets from meeting notes, (2) Extract or find action items from notes, (3) Parse meeting notes for assigned tasks, or (4) Analyze notes and generate tasks for team members."
+metadata:
+  version: "0.1.0"
 ---
 
 # Capture Tasks from Meeting Notes
@@ -121,6 +123,8 @@ Once confirmed, create each Jira task using the Safe create pattern in `jira-tas
 
 #### For Each Action Item
 
+Replace `<SKILL_VERSION>` in the trailer with this skill's `metadata.version` value:
+
 ```bash
 # Once before the loop (if not already sourced):
 source "$(git rev-parse --show-toplevel)/tools/jira-safe-create.sh"
@@ -140,6 +144,10 @@ cat >"$BODY" <<'EOF'
 **Context:**
 Meeting title/date
 Relevant discussion points
+
+---
+
+_This task was captured from meeting notes with AI assistance ([capture-tasks-from-meeting-notes](https://github.com/osac-project/osac-workspace/tree/main/skills/capture-tasks-from-meeting-notes) v<SKILL_VERSION>). Review for accuracy_
 EOF
 
 jira issue create -tTask \

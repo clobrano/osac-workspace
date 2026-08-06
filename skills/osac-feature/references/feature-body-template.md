@@ -10,6 +10,7 @@ so that Z") or explicitly mark the persona as not affected by this feature.
 
 Write the Feature body to `$BODY` using this structure (`BODY=$(new_temp osac-feature-body)` first). Use a blank line before
 each `###` persona heading so jira-cli preserves separate subsections in Jira.
+Replace `<SKILL_VERSION>` in the trailer with this skill's `metadata.version` value from `skills/osac-feature/SKILL.md`.
 
 ```markdown
 ## Feature Goal
@@ -45,6 +46,10 @@ each `###` persona heading so jira-cli preserves separate subsections in Jira.
 
 ## Out of Scope
 <What is excluded>
+
+---
+
+_This feature specification was drafted with AI assistance ([osac-feature](https://github.com/osac-project/osac-workspace/tree/main/skills/osac-feature) v<SKILL_VERSION>). Review for accuracy_
 ```
 
 ## Duplicate check

@@ -1,6 +1,8 @@
 ---
 name: create-pr
 description: Create a PR on an OSAC component repo (including the osac mono-repo, which may need per-component validation for multiple touched components in one pass) using the fork-based workflow. Runs repo-specific validation (build, test, lint), pushes to the developer's push remote, and opens a PR against the upstream repo with proper title format. Use when the user says 'create PR', 'open PR', 'submit for review', 'push and create PR', or when finishing a feature branch.
+metadata:
+  version: "0.1.0"
 ---
 
 # Create Pull Request
@@ -297,7 +299,7 @@ Construct the title from the ticket key and a short description (ask the user if
 PR_TITLE="${TICKET:+$TICKET: }<short description>"
 ```
 
-Create the PR from `$PUSH_REMOTE` to upstream:
+Create the PR from `$PUSH_REMOTE` to upstream. Replace `<SKILL_VERSION>` in the trailer with this skill's `metadata.version` value:
 
 ```bash
 gh pr create \
@@ -317,7 +319,9 @@ gh pr create \
 - [ ] Unit tests pass
 - [ ] Lint/format checks pass
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+---
+
+_This PR description was drafted with AI assistance ([create-pr](https://github.com/osac-project/osac-workspace/tree/main/skills/create-pr) v<SKILL_VERSION>). Review for accuracy_
 EOF
 )"
 ```
