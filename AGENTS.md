@@ -45,13 +45,14 @@ Note: `fulfillment-api` and `fulfillment-common` were merged into `fulfillment-s
 
 | Component | Description | AGENTS.md |
 |-----------|-------------|-----------|
-| [`osac`](https://github.com/osac-project/osac) | Mono-repo: `fulfillment-service` + `osac-operator` + `osac-aap` + `osac-installer` + `bare-metal-fulfillment-operator` + `osac-csi-driver` (see subdirectories below) | — |
+| [`osac`](https://github.com/osac-project/osac) | Mono-repo: `fulfillment-service` + `osac-operator` + `osac-aap` + `osac-installer` + `bare-metal-fulfillment-operator` + `osac-csi-driver` + `osac-metering` (see subdirectories below) | — |
 | `osac/fulfillment-service` | gRPC server + REST gateway, PostgreSQL, integrated API definitions | Yes |
 | `osac/osac-operator` | Kubernetes operator for OpenShift clusters via Hosted Control Planes | Yes |
 | `osac/osac-aap` | Ansible Automation Platform roles for infrastructure provisioning | Yes |
 | `osac/osac-installer` | Helm charts and installation prerequisites | Yes |
 | `osac/bare-metal-fulfillment-operator` | Kubernetes operator for bare metal fulfillment | Yes |
 | `osac/osac-csi-driver` | CSI storage driver, routes to vendor backends via fulfillment-service storage tiers | Yes |
+| `osac/osac-metering` | Metering pipeline for resource usage events and Kafka publishing | Yes |
 | [`osac-test-infra`](https://github.com/osac-project/osac-test-infra) | Integration testing infrastructure | — |
 | [`osac-ui`](https://github.com/osac-project/osac-ui) | OSAC UI web console | Yes |
 | [`osac-ux`](https://github.com/osac-project/osac-ux) | React 19 + PatternFly 6 UI console — read-only UI reference | Yes (`osac-ux/AGENTS.md`) |
@@ -70,6 +71,7 @@ This workspace has no build step of its own. Each component repo documents build
 | `osac/osac-installer/`                  | —            | —                        | `make helm-lint`      |
 | `osac/bare-metal-fulfillment-operator/` | `make build` | `make test`              | `make lint`           |
 | `osac/osac-csi-driver/`                 | `make build` | `make test`              | `make lint`           |
+| `osac/osac-metering/`                   | —            | —                        | —                     |
 | `osac-test-infra/`                      | —            | —                        | `make lint`           |
 | `osac-ui/`                              | `pnpm build` | `pnpm test`              | `pnpm lint`            |
 
