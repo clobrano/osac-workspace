@@ -10,7 +10,7 @@ The OSAC CLI (`osac/fulfillment-service/internal/cmd/cli/`) is a tenant-facing t
 
 ## Existing Verbs
 
-`create`, `get`, `describe`, `edit`, `delete`, `annotate`, `label`, `login`, `logout`, `lookup`, `console`, `whoami`, `version`
+`create`, `get`, `describe`, `edit`, `delete`, `annotate`, `label`, `login`, `logout`, `lookup`, `console`, `scale`, `tenant`, `whoami`, `version`
 
 ## When Adding New CLI Commands
 
