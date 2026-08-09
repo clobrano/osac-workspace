@@ -14,4 +14,4 @@ Request path for REST API calls:
 HTTP client → REST gateway (grpc-gateway mux) → gRPC interceptors → server handler
 ```
 
-Check `internal/cmd/service/start/restgateway/start_rest_gateway_cmd.go` for gateway configuration when adding new headers.
+Check `osac/fulfillment-service/internal/cmd/service/start/restgateway/start_rest_gateway_cmd.go` for gateway configuration when adding new headers.

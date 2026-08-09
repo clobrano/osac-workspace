@@ -194,7 +194,7 @@ Two-stage enhancement proposal flow. See the Enhancement Proposals section above
 
 **Stage 1 — PRD:** ingest → clarify → draft → publish → respond
 
-**Stage 2 — Design (EP):** ingest → draft → publish → respond → decompose → sync
+**Stage 2 — Design (EP):** ingest → research → draft → publish → respond → decompose → sync
 
 **Single-step (legacy):** `/ep.create` (registered legacy skill name; see `CLAUDE.md` for Claude command syntax)
 
@@ -290,7 +290,7 @@ The osac-operator uses controller-runtime to reconcile OSAC custom resources on 
 
 - **All controllers follow the same reconciliation pattern**: finalizer → status update → provisioning/deprovisioning lifecycle
 - **Shared provisioning lifecycle**: Controllers use `provisioning.RunProvisioningLifecycle()` for provision and manual deprovision handling
-- **CRD types**: ClusterOrder, ComputeInstance, ExternalIP, ExternalIPAttachment, ExternalIPPool, Job, NatGateway, SecurityGroup, Subnet, Tenant, VirtualNetwork
+- **CRD types**: ClusterOrder, ComputeInstance, ExternalIP, ExternalIPAttachment, ExternalIPPool, NatGateway, SecurityGroup, Subnet, Tenant, VirtualNetwork
 - **Multi-cluster support**: Controllers use `multicluster-runtime` for management/workload cluster separation
 - **Management-state annotation**: All controllers should check `osac.openshift.io/management-state` and skip reconciliation when set to `Unmanaged`
 - **Namespace isolation**: Networking controllers filter to a configured namespace via `NetworkingNamespacePredicate`
