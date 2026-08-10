@@ -404,11 +404,6 @@ exclude:
   - "enhancement-proposals/**"
   - "osac-ux/**"
   - ".ai-workflows/**"
-  # Untracked local development directories (not committed)
-  - "design-creator/**"
-  - "prd-creator/**"
-  - "osac-ai-skills/**"
-  - "enclave/**"
   # Workspace artifacts and generated content
   - ".artifacts/**"
   - "docs/pr-dashboard/data.json"
