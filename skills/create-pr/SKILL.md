@@ -2,10 +2,10 @@
 name: create-pr
 description: Create a PR on an OSAC component repo (including the osac mono-repo, which may need per-component validation for multiple touched components in one pass) using the fork-based workflow. Runs repo-specific validation (build, test, lint), pushes to the developer's push remote, and opens a PR against the upstream repo with proper title format. Use when the user says 'create PR', 'open PR', 'submit for review', 'push and create PR', or when finishing a feature branch.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
 ---
 
-# Create Pull Request
+# Create PR
 
 Create a PR on an OSAC component repo using the fork-based workflow.
 
@@ -348,7 +348,7 @@ Apply this logic:
 | Condition | Overall Verdict | Action |
 |-----------|----------------|--------|
 | Either reviewer returned INVALID | INVALID | Stop, report what failed |
-| Any finding is CRITICAL or IMPORTANT | BLOCKED | Stop, show aggregated report |
+| Any finding is `CRITICAL` or `IMPORTANT` | BLOCKED | Stop, show aggregated report |
 | All findings are ADVISORY only | PASS | Show report, continue to Step 5 |
 | No findings from either reviewer | PASS | Continue to Step 5 |
 
@@ -360,12 +360,12 @@ re-running this step after fixing the git state or re-reading the failed
 reviewer's `SKILL.md`, not editing code.
 
 **If BLOCKED:** Stop. Show the full aggregated findings table with all
-CRITICAL/IMPORTANT issues. Do not push. Fix the flagged issues in a new
+`CRITICAL`/`IMPORTANT` issues. Do not push. Fix the flagged issues in a new
 commit (never amend — see Red Flags), then restart at Step 2.
 Re-run validation, coverage analysis, and this review gate before pushing.
 
 **If PASS (with ADVISORY findings):** Show the aggregated report with the
-ADVISORY findings and note that they do not block. Continue to Step 5.
+ADVISORY findings — these do not block. Continue to Step 5.
 
 **If PASS (clean):** Report "Pre-flight review gate: PASS (no findings)."
 Continue to Step 5.
