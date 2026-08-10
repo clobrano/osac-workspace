@@ -2,7 +2,7 @@
 name: report-bug
 description: Report a bug in Jira without fixing it — creates a Bug ticket with proper description, links it to an epic, and assigns it. Use when the user says 'report a bug', 'file a bug', 'log a bug', 'open a bug ticket', or wants to track a bug without immediately writing a fix.
 metadata:
-  version: "0.1.2"
+  version: "0.1.3"
 ---
 
 # Report Bug
@@ -242,15 +242,23 @@ If logs, screenshots, or other files came up during the conversation, list them 
 **Do not attach files containing sensitive data (credentials, tokens, keys, secrets, passwords, API keys, PII, or internal hostnames). Read the file content before attaching. If in doubt, ask the user.**
 
 ```bash
-curl -s --fail -K - \
-  -H "X-Atlassian-Token: no-check" \
-  -F "file=@<path>" \
-  "https://redhat.atlassian.net/rest/api/3/issue/$KEY/attachments" <<EOF
-user = "$(grep '^login:' ~/.config/.jira/.config.yml | awk '{print $2}'):${JIRA_API_TOKEN}"
+source "$(git rev-parse --show-toplevel)/tools/jira-safe-create.sh"
+
+login=$(jira_login) || { echo "Jira login not configured — attach manually via the Jira link" >&2; }
+token=$(jira_token) || { echo "No Jira API token available (checked \$JIRA_API_TOKEN and ~/.netrc) — attach manually via the Jira link" >&2; }
+if [ -n "${login:-}" ] && [ -n "${token:-}" ]; then
+  curl -s --fail-with-body -K - \
+    -H "X-Atlassian-Token: no-check" \
+    -F "file=@<path>" \
+    "https://redhat.atlassian.net/rest/api/3/issue/$KEY/attachments" <<EOF
+user = "${login}:${token}"
 EOF
+fi
 ```
 
-If the upload fails (missing `$JIRA_API_TOKEN`, auth error, or network issue), skip it and tell the user to attach files manually via the Jira link.
+Re-source `tools/jira-safe-create.sh` here rather than assuming the "Create the Bug" step above ran in the same shell session — sourcing is idempotent (see its own `JIRA_SAFE_CREATE_LOADED` guard), so this is safe whether or not it's already loaded. `jira_login()`/`jira_token()` are pre-checked before curl runs (rather than called inline inside the heredoc) so a missing credential reports its own clear cause instead of surfacing as a generic curl auth error. `jira_token()` prefers `$JIRA_API_TOKEN` but falls back to the `machine redhat.atlassian.net` entry in `~/.netrc` — the same credentials `jira-cli` itself authenticates from — so the upload works without a separate token export.
+
+If the upload fails (no credentials in `$JIRA_API_TOKEN` or `~/.netrc`, auth error, or network issue), skip it and tell the user to attach files manually via the Jira link.
 
 ## Report
 

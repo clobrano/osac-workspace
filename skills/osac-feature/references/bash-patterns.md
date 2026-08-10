@@ -182,8 +182,12 @@ custom field: Jira expects the team's ID (a UUID), not its display name, and
 neither `jira-cli` nor JQL can resolve a team name to its ID. This skill
 sets Team with a direct REST call instead, following the same `curl -K -`
 credential pattern `report-bug` already uses for attachment uploads (reads
-the Jira username from `~/.config/.jira/.config.yml` and the token from
-`$JIRA_API_TOKEN`, passed via stdin so neither appears in the process list).
+the Jira username from `~/.config/.jira/.config.yml` via `jira_login()`,
+passed via stdin so it never appears in the process list). Unlike
+`report-bug`, the token comes from `jira_token()` (`tools/jira-safe-create.sh`),
+which prefers `$JIRA_API_TOKEN` but falls back to the same `~/.netrc` entry
+`jira-cli` itself authenticates from, so Team-setting works without a
+separate token export.
 
 ```bash
 # Hardcoded team name -> team ID (UUID), harvested read-only from existing
@@ -244,24 +248,35 @@ validate_team() {
 # to fix it manually, returns 1, does not exit. Caller passes a canonical
 # name from TEAM_NAME_TO_ID (already validated via validate_team).
 apply_team() {
-  local key=$1 team_name=$2 team_id err out
+  local key=$1 team_name=$2 team_id err out login token
   team_id=$(team_id_for_name "$team_name") || {
     echo "Unknown team '${team_name}' for ${key} — set manually in Jira UI" >&2
+    return 1
+  }
+  login=$(jira_login) || {
+    echo "Jira login not configured — set '${team_name}' manually for ${key}:" >&2
+    echo "  https://redhat.atlassian.net/browse/${key}" >&2
+    return 1
+  }
+  token=$(jira_token) || {
+    echo "No Jira API token available (checked \$JIRA_API_TOKEN and ~/.netrc) — set '${team_name}' manually for ${key}:" >&2
+    echo "  https://redhat.atlassian.net/browse/${key}" >&2
     return 1
   }
   err=$(new_temp osac-jira-team-err)
   add_temp "$err"
   out=$(new_temp osac-jira-team-out)
   add_temp "$out"
-  if ! curl -s --fail --max-time 30 -K - -X PUT -H "Content-Type: application/json" \
-    --data "{\"fields\":{\"customfield_10001\":\"${team_id}\"}}" \
+  if ! curl -s --fail-with-body --max-time 30 -K - -X PUT -H "Content-Type: application/json" \
+    --data "$(jq -n --arg id "$team_id" '{fields: {customfield_10001: $id}}')" \
     "https://redhat.atlassian.net/rest/api/3/issue/${key}" \
     >"$out" 2>"$err" <<EOF
-user = "$(jira_login):${JIRA_API_TOKEN}"
+user = "${login}:${token}"
 EOF
   then
     echo "Team field edit failed for ${key} (${team_name}) — jira-cli has no write path for this field, so set it manually if the REST call above didn't succeed:" >&2
     echo "  https://redhat.atlassian.net/browse/${key}" >&2
+    cat "$out" >&2
     cat "$err" >&2
     return 1
   fi
@@ -296,6 +311,10 @@ apply_bootstrap_epic_metadata() {
   if ! raw=$(jira issue view "$epic_key" --raw 2>>"$err"); then
     echo "Could not read ${epic_key} for fix version/team check — set both manually if needed" >&2
     cat "$err" >&2
+    return 0
+  fi
+  if ! jq -e . >/dev/null 2>&1 <<<"$raw"; then
+    echo "Could not parse ${epic_key} JSON for fix version/team check — set both manually if needed" >&2
     return 0
   fi
 
