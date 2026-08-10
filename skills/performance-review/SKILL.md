@@ -2,6 +2,8 @@
 name: performance-review
 description: Performance self-review of a branch's changes before PR submission. Scans everything changed since diverging from a base ref (main by default, committed, staged, and unstaged, via merge-base) for O(n)/O(n^2) hot-path issues, memory/goroutine leaks, and inefficient patterns across OSAC's Go services and Ansible/Python tooling. Use standalone before opening a PR, or via the review-gate skill as part of create-pr's pre-flight gate.
 allowed-tools: Read, Grep, Bash, Glob
+metadata:
+  version: "0.1.0"
 ---
 
 # Performance Review
