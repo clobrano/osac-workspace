@@ -205,10 +205,21 @@ Read the component's CLAUDE.md or Makefile for the correct validation sequence.
 
 Analyze the diff to detect production code changes that lack corresponding test changes. This is **advisory only** — it warns but does not block PR creation.
 
-Run:
+Compute the merge-base first — same fail-closed pattern as `review-gate`'s
+Prerequisites:
 
 ```bash
-git diff main..HEAD --name-only --diff-filter=AMR
+MERGE_BASE=$(git merge-base main HEAD)
+```
+
+If this command fails, stop and report the error — do not continue with an
+empty or missing merge-base. Step 1 already validated that `main` exists,
+so a failure here indicates a deeper problem (e.g., unrelated histories).
+
+Then list the changed files:
+
+```bash
+git diff "$MERGE_BASE" --name-only --diff-filter=AMR
 ```
 
 Classify each changed file using the component-specific rules below — for
@@ -249,7 +260,117 @@ This is a warning — proceeding with PR creation.
 
 **Always continue to Step 4** regardless of the result.
 
-## Step 4: Push to Push Remote
+## Step 4: Pre-Flight Review Gate
+
+Run security and performance reviews in parallel before pushing. This is the
+last local check before anything leaves the machine — it runs after
+validation (Step 2) and the coverage advisory (Step 3), since either of those
+can still prompt more edits, and right before push (Step 5).
+
+By this point the working tree is already clean and everything is committed
+(Step 1's gate check requires that). The reviewers will diff from
+`$(git merge-base main HEAD)` — not a raw `git diff main` — so they review
+exactly the commits about to be pushed even if `main` has advanced since this
+branch was created.
+
+**Future enhancement**: Read reviewer list from a configuration file instead
+of hardcoding the two reviewers below. This will enable other projects to
+adopt this framework with their own reviewer sets.
+
+### 4.1: Launch Reviewers in Parallel
+
+Spawn both reviewers as background agents in a single message (so they run
+concurrently):
+
+```text
+Agent tool calls (both in the same message):
+  1. subagent_type: not specified (use skills/performance-review/SKILL.md)
+     prompt: |
+       Run a performance review on the current branch's changes.
+       
+       BASE: main
+       
+       Follow skills/performance-review/SKILL.md exactly. Return your findings
+       in this exact format:
+       
+       VERDICT: [PASS|BLOCKED|INVALID]
+       
+       FINDINGS (if any):
+       | Severity | File:Line | Issue | Suggestion |
+       |----------|-----------|-------|------------|
+       | [CRITICAL|IMPORTANT|ADVISORY] | path:line | description | fix |
+       
+       If INVALID, explain what failed (git merge-base, scope empty, etc.).
+
+  2. subagent_type: not specified (use skills/security-review/SKILL.md)
+     prompt: |
+       Run a security review on the current branch's changes.
+       
+       BASE: main
+       
+       Follow skills/security-review/SKILL.md exactly. Return your findings
+       in this exact format:
+       
+       VERDICT: [PASS|BLOCKED|INVALID]
+       
+       FINDINGS (if any):
+       | Severity | File:Line | Issue | Suggestion |
+       |----------|-----------|-------|------------|
+       | [CRITICAL|IMPORTANT|ADVISORY] | path:line | description | fix |
+       
+       If INVALID, explain what failed (git merge-base, scope empty, etc.).
+```
+
+Wait for both agents to complete.
+
+### 4.2: Aggregate Results
+
+Parse both agents' outputs to extract:
+- Each agent's verdict (PASS, BLOCKED, or INVALID)
+- Each agent's findings table (if any)
+
+Combine all findings into a single aggregated table:
+
+```markdown
+| Severity | File:Line | Category | Issue | Suggestion |
+|----------|-----------|----------|-------|------------|
+| ... | ... | Performance | ... | ... |
+| ... | ... | Security | ... | ... |
+```
+
+Add a "Category" column to distinguish which reviewer raised each finding
+(Performance or Security).
+
+### 4.3: Determine Overall Verdict
+
+Apply this logic:
+
+| Condition | Overall Verdict | Action |
+|-----------|----------------|--------|
+| Either reviewer returned INVALID | INVALID | Stop, report what failed |
+| Any finding is CRITICAL or IMPORTANT | BLOCKED | Stop, show aggregated report |
+| All findings are ADVISORY only | PASS | Show report, continue to Step 5 |
+| No findings from either reviewer | PASS | Continue to Step 5 |
+
+### 4.4: Gate and Report
+
+**If INVALID:** Stop. Show which reviewer(s) failed and why (typically a
+`git merge-base` failure or empty scope). Do not push. The next action is
+re-running this step after fixing the git state or re-reading the failed
+reviewer's `SKILL.md`, not editing code.
+
+**If BLOCKED:** Stop. Show the full aggregated findings table with all
+CRITICAL/IMPORTANT issues. Do not push. Fix the flagged issues in a new
+commit (never amend — see Red Flags), then restart at Step 2.
+Re-run validation, coverage analysis, and this review gate before pushing.
+
+**If PASS (with ADVISORY findings):** Show the aggregated report with the
+ADVISORY findings and note that they do not block. Continue to Step 5.
+
+**If PASS (clean):** Report "Pre-flight review gate: PASS (no findings)."
+Continue to Step 5.
+
+## Step 5: Push to Push Remote
 
 Always push to `$PUSH_REMOTE`, never to `$UPSTREAM_REMOTE`.
 
@@ -259,7 +380,7 @@ git push -u "$PUSH_REMOTE" "$BRANCH"
 
 If push fails due to diverged history, do not force-push automatically. Show the push error to the user and ask them for explicit instructions on how to proceed.
 
-## Step 5: Determine PR Title
+## Step 6: Determine PR Title
 
 The PR title must include the Jira ticket key if one exists.
 
@@ -279,7 +400,7 @@ If no ticket key is found, ask: "Is there a Jira ticket for this work? (e.g., OS
 
 If none, omit the prefix — just use a descriptive title.
 
-## Step 6: Create PR
+## Step 7: Create PR
 
 `fulfillment-service`, `osac-operator`, `osac-aap`, `osac-installer`,
 `bare-metal-fulfillment-operator`, and `osac-csi-driver` share one remote pair
@@ -326,7 +447,7 @@ EOF
 )"
 ```
 
-## Step 7: Report Result
+## Step 8: Report Result
 
 Display the PR URL as a clickable markdown link:
 
@@ -345,10 +466,11 @@ related PRs in the description (e.g., 'Depends on osac-project/osac#123')."
 | 1 | Detect context, resolve remotes | Not on main, push remote exists, commits ahead |
 | 2 | Run validation | All checks pass |
 | 3 | Check test coverage | Advisory warning (does not block) |
-| 4 | Push branch | Push to `$PUSH_REMOTE` succeeds |
-| 5 | Determine title | Jira key included if available |
-| 6 | Create PR | PR created against upstream repo |
-| 7 | Report | Show PR URL |
+| 4 | Pre-flight review gate | Performance + Security reviews in parallel, PASS required (blocks on BLOCKED or INVALID) |
+| 5 | Push branch | Push to `$PUSH_REMOTE` succeeds |
+| 6 | Determine title | Jira key included if available |
+| 7 | Create PR | PR created against upstream repo |
+| 8 | Report | Show PR URL |
 
 ## Common Issues
 
@@ -387,12 +509,15 @@ If a PR already exists, show its URL instead of creating a duplicate.
 - Push to `$UPSTREAM_REMOTE` — always use `$PUSH_REMOTE`
 - Create a PR from `main`
 - Skip validation checks
+- Skip the pre-flight review gate (Step 4), or push after either reviewer reports BLOCKED or INVALID
 - Force-push without user confirmation
 - Create a PR with failing tests
+- Amend an existing commit — always create a new one
 
 **Always:**
 - Resolve remotes with `tools/resolve-remotes.sh` before pushing
 - Run repo-specific validation first
+- Run the pre-flight review gate before pushing
 - Push to `$PUSH_REMOTE`
 - Include Jira ticket key in title when available
 - Check for existing PRs before creating duplicates
