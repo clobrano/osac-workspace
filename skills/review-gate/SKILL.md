@@ -1,6 +1,6 @@
 ---
 name: review-gate
-description: Local pre-flight review gate that runs performance and security reviews against everything this branch has changed since diverging from a base ref (main by default, via merge-base — not a raw diff against the base's current tip) before PR submission, covering committed, staged, and unstaged changes uniformly. Orchestrates the performance-review and security-review skills in sequence and aggregates their findings into one actionable report. Use standalone before opening a PR, or automatically as a step in create-pr or /implement:publish. Blocks on critical/important findings from either reviewer.
+description: Local pre-flight review gate that runs performance and security reviews against everything this branch has changed since diverging from a base ref (main by default, via merge-base — not a raw diff against the base's current tip) before PR submission, covering committed, staged, and unstaged changes uniformly. Orchestrates the performance-review and security-review skills in sequence and aggregates their findings into one actionable report. Use standalone before opening a PR, or automatically as a step in create-pr. Blocks on critical/important findings from either reviewer.
 allowed-tools: Read, Grep, Bash, Glob
 ---
 
@@ -11,9 +11,8 @@ Runs OSAC's local review swarm — `performance-review` then `security-review`
 plus any untracked files: everything this branch has changed since it
 diverged, committed or not, staged or not, and even files never `git add`-ed
 at all. `{BASE}` is `main` by default — see Parameters. Uniform whether run
-standalone mid-work or invoked by `create-pr`/`implement:publish` right
-before push. See Step 1 for why "since it diverged" and not just "diff
-against `{BASE}`" matters.
+standalone mid-work or invoked by `create-pr` right before push. See Step 1
+for why "since it diverged" and not just "diff against `{BASE}`" matters.
 
 This is the last local checkpoint before a change leaves the machine: run it
 standalone whenever you want a pre-flight pass, or let `create-pr` invoke it
@@ -39,8 +38,7 @@ after Step 3 has aggregated every reviewer's output.
 Callers that stack branches (a story built on top of another, not directly
 on `main`) must pass their actual parent branch as `BASE` — see Step 1 for
 why `main` would be wrong there. `create-pr` never stacks, so it uses the
-default without saying anything. `/implement:publish`'s override passes
-`{local-base}` explicitly.
+default without saying anything.
 
 ## Prerequisites
 

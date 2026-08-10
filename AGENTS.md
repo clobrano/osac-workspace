@@ -191,14 +191,6 @@ Installed via `bootstrap.sh` from [flightctl/ai-workflows](https://github.com/fl
 
 Both workflows are phase-based — you can jump to any phase directly (e.g., `bugfix:fix`, `implement:code`).
 
-#### Project Overrides
-
-- **`implement:publish`** — overridden at `.workflows/implement/skills/publish.md` to add a
-  **Pre-Flight Review Gate** step (security + performance, via the `review-gate` skill) between
-  the built-in cross-cutting review and the confirm/push steps. This is OSAC-938's local review
-  gate applied to the `/implement:publish` path, in addition to `create-pr` — most OSAC work goes
-  through `/implement:publish`, not `create-pr` directly, so both paths need the same gate.
-
 ### PRD and Design Workflows
 
 Two-stage enhancement proposal flow. See the Enhancement Proposals section above for docs repo, file path conventions, and templates.

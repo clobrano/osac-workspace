@@ -265,39 +265,113 @@ This is a warning — proceeding with PR creation.
 
 ## Step 4: Pre-Flight Review Gate
 
-Run the `review-gate` skill: read `../review-gate/SKILL.md` with the `Read`
-tool and follow it exactly, as if it were pasted inline here — don't rely on
-memory of what it does, even if you've run it earlier in this session. If
-your harness offers a dedicated skill-invocation mechanism (e.g. Claude
-Code's `Skill` tool), using that is fine too; either way, treat this step as
-a fresh execution of `review-gate`'s current instructions, not a recall of a
-prior result.
-
-This is the last local check before anything leaves the machine — it runs
-after validation (Step 2) and the coverage advisory (Step 3), since either
-of those can still prompt more edits, and right before push (Step 5).
+Run security and performance reviews in parallel before pushing. This is the
+last local check before anything leaves the machine — it runs after
+validation (Step 2) and the coverage advisory (Step 3), since either of those
+can still prompt more edits, and right before push (Step 5).
 
 By this point the working tree is already clean and everything is committed
-(Step 1's gate check requires that). `create-pr` doesn't stack branches, so
-use `review-gate`'s default `BASE` (`main`) — no override needed.
-`review-gate` diffs from `$(git merge-base main HEAD)` — not a raw
-`git diff main` — so it reviews exactly the commits about to be pushed even
-if `main` has advanced since this branch was created. Nothing to stage
-here.
+(Step 1's gate check requires that). The reviewers will diff from
+`$(git merge-base main HEAD)` — not a raw `git diff main` — so they review
+exactly the commits about to be pushed even if `main` has advanced since this
+branch was created.
 
-**If the gate reports BLOCKED:** Stop. Show the full aggregated report from
-`review-gate`. Do not push. Fix the flagged issues in a new commit (never
-amend — see Red Flags) and re-run this step.
+**Future enhancement**: Read reviewer list from a configuration file instead
+of hardcoding the two reviewers below. This will enable other projects to
+adopt this framework with their own reviewer sets.
 
-**If the gate reports INVALID:** Stop — treat this the same as BLOCKED for
-the purpose of not pushing. Show what failed and why: either the gate's
-own scope-capture (`git merge-base` against `{BASE}`) failed, or a
-reviewer step produced no usable output. Either way, this means the gate
-itself didn't complete, not that the code has a confirmed problem — the
-next action is re-running this step (fixing the `{BASE}`/fetch issue, or
-re-reading the failed reviewer's `SKILL.md` fresh), not editing code.
+### 4.1: Launch Reviewers in Parallel
 
-**If the gate reports PASS:** Continue to Step 5.
+Spawn both reviewers as background agents in a single message (so they run
+concurrently):
+
+```text
+Agent tool calls (both in the same message):
+  1. subagent_type: not specified (use skills/performance-review/SKILL.md)
+     prompt: |
+       Run a performance review on the current branch's changes.
+       
+       BASE: main
+       
+       Follow skills/performance-review/SKILL.md exactly. Return your findings
+       in this exact format:
+       
+       VERDICT: [PASS|BLOCKED|INVALID]
+       
+       FINDINGS (if any):
+       | Severity | File:Line | Issue | Suggestion |
+       |----------|-----------|-------|------------|
+       | [CRITICAL|IMPORTANT|ADVISORY] | path:line | description | fix |
+       
+       If INVALID, explain what failed (git merge-base, scope empty, etc.).
+
+  2. subagent_type: not specified (use skills/security-review/SKILL.md)
+     prompt: |
+       Run a security review on the current branch's changes.
+       
+       BASE: main
+       
+       Follow skills/security-review/SKILL.md exactly. Return your findings
+       in this exact format:
+       
+       VERDICT: [PASS|BLOCKED|INVALID]
+       
+       FINDINGS (if any):
+       | Severity | File:Line | Issue | Suggestion |
+       |----------|-----------|-------|------------|
+       | [CRITICAL|IMPORTANT|ADVISORY] | path:line | description | fix |
+       
+       If INVALID, explain what failed (git merge-base, scope empty, etc.).
+```
+
+Wait for both agents to complete.
+
+### 4.2: Aggregate Results
+
+Parse both agents' outputs to extract:
+- Each agent's verdict (PASS, BLOCKED, or INVALID)
+- Each agent's findings table (if any)
+
+Combine all findings into a single aggregated table:
+
+```markdown
+| Severity | File:Line | Category | Issue | Suggestion |
+|----------|-----------|----------|-------|------------|
+| ... | ... | Performance | ... | ... |
+| ... | ... | Security | ... | ... |
+```
+
+Add a "Category" column to distinguish which reviewer raised each finding
+(Performance or Security).
+
+### 4.3: Determine Overall Verdict
+
+Apply this logic:
+
+| Condition | Overall Verdict | Action |
+|-----------|----------------|--------|
+| Either reviewer returned INVALID | INVALID | Stop, report what failed |
+| Any finding is CRITICAL or IMPORTANT | BLOCKED | Stop, show aggregated report |
+| All findings are ADVISORY only | PASS | Show report, continue to Step 5 |
+| No findings from either reviewer | PASS | Continue to Step 5 |
+
+### 4.4: Gate and Report
+
+**If INVALID:** Stop. Show which reviewer(s) failed and why (typically a
+`git merge-base` failure or empty scope). Do not push. The next action is
+re-running this step after fixing the git state or re-reading the failed
+reviewer's `SKILL.md`, not editing code.
+
+**If BLOCKED:** Stop. Show the full aggregated findings table with all
+CRITICAL/IMPORTANT issues. Do not push. Fix the flagged issues in a new
+commit (never amend — see Red Flags), then restart at Step 2.
+Re-run validation, coverage analysis, and this review gate before pushing.
+
+**If PASS (with ADVISORY findings):** Show the aggregated report with the
+ADVISORY findings and note that they do not block. Continue to Step 5.
+
+**If PASS (clean):** Report "Pre-flight review gate: PASS (no findings)."
+Continue to Step 5.
 
 ## Step 5: Push to Push Remote
 
@@ -393,7 +467,7 @@ related PRs in the description (e.g., 'Depends on osac-project/osac#123')."
 | 1 | Detect context, resolve remotes | Not on main, push remote exists, commits ahead |
 | 2 | Run validation | All checks pass |
 | 3 | Check test coverage | Advisory warning (does not block) |
-| 4 | Pre-flight review gate | `review-gate` reports PASS (blocks on BLOCKED or INVALID) |
+| 4 | Pre-flight review gate | Performance + Security reviews in parallel, PASS required (blocks on BLOCKED or INVALID) |
 | 5 | Push branch | Push to `$PUSH_REMOTE` succeeds |
 | 6 | Determine title | Jira key included if available |
 | 7 | Create PR | PR created against upstream repo |
@@ -436,7 +510,7 @@ If a PR already exists, show its URL instead of creating a duplicate.
 - Push to `$UPSTREAM_REMOTE` — always use `$PUSH_REMOTE`
 - Create a PR from `main`
 - Skip validation checks
-- Skip the pre-flight review gate, or push after it reports BLOCKED or INVALID
+- Skip the pre-flight review gate (Step 4), or push after either reviewer reports BLOCKED or INVALID
 - Force-push without user confirmation
 - Create a PR with failing tests
 - Amend an existing commit — always create a new one
