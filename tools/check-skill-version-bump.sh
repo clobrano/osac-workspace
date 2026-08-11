@@ -21,15 +21,26 @@ is_ignored() {
 }
 
 # Extracts metadata.version from a SKILL.md frontmatter block.
+# Only matches version: at the direct-child indentation level of metadata:,
+# not deeper keys like metadata.release.version.
 extract_version() {
   local ref=$1 path=$2
   { git show "${ref}:${path}" 2>/dev/null || true; } \
     | awk '
       /^---[[:space:]]*$/ { c++; next }
       c != 1 { next }
-      /^metadata:[[:space:]]*$/ { in_meta=1; next }
+      /^metadata:[[:space:]]*$/ { in_meta=1; child_indent=""; next }
       in_meta && /^[^[:space:]]/ { in_meta=0 }
-      in_meta && /^[[:space:]]+version:[[:space:]]*/ { sub(/^[[:space:]]+version:[[:space:]]*/, ""); print; exit }
+      in_meta && child_indent == "" && /^[[:space:]]/ {
+        match($0, /^[[:space:]]+/)
+        child_indent = substr($0, 1, RLENGTH)
+      }
+      in_meta && child_indent != "" \
+        && substr($0, 1, length(child_indent)) == child_indent \
+        && substr($0, length(child_indent)+1, 1) !~ /[[:space:]]/ \
+        && $0 ~ ("^" child_indent "version:[[:space:]]") {
+        sub(/^[[:space:]]+version:[[:space:]]*/, ""); print; exit
+      }
     ' \
     | sed -E 's/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/' \
     | sed -E 's/[[:space:]]+$//'
