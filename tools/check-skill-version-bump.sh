@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Fails a PR if a skills/*/SKILL.md file with a version field (top-level
-# `version:` or nested `metadata.version:`) changed content without also
-# changing that version string. No semver comparison - just "did it change?"
+# Fails a PR if a skills/*/SKILL.md file with a metadata.version field
+# changed content without also changing that version string.
+# No semver comparison - just "did it change?"
 # Usage: tools/check-skill-version-bump.sh <base-ref>
 set -euo pipefail
 
@@ -20,20 +20,27 @@ is_ignored() {
   return 1
 }
 
-# Only matches a top-level `version:` or a `version:` nested directly under a
-# top-level `metadata:` block -- not version keys under other mappings (e.g.
-# a hypothetical `release.version`), which aren't part of the skill's own
-# declared version.
+# Extracts metadata.version from a SKILL.md frontmatter block.
+# Only matches version: at the direct-child indentation level of metadata:,
+# not deeper keys like metadata.release.version.
 extract_version() {
   local ref=$1 path=$2
   { git show "${ref}:${path}" 2>/dev/null || true; } \
     | awk '
       /^---[[:space:]]*$/ { c++; next }
       c != 1 { next }
-      /^version:[[:space:]]*/ { sub(/^version:[[:space:]]*/, ""); print; exit }
-      /^metadata:[[:space:]]*$/ { in_meta=1; next }
+      /^metadata:[[:space:]]*$/ { in_meta=1; child_indent=""; next }
       in_meta && /^[^[:space:]]/ { in_meta=0 }
-      in_meta && /^[[:space:]]+version:[[:space:]]*/ { sub(/^[[:space:]]+version:[[:space:]]*/, ""); print; exit }
+      in_meta && child_indent == "" && /^[[:space:]]/ {
+        match($0, /^[[:space:]]+/)
+        child_indent = substr($0, 1, RLENGTH)
+      }
+      in_meta && child_indent != "" \
+        && substr($0, 1, length(child_indent)) == child_indent \
+        && substr($0, length(child_indent)+1, 1) !~ /[[:space:]]/ \
+        && $0 ~ ("^" child_indent "version:[[:space:]]") {
+        sub(/^[[:space:]]+version:[[:space:]]*/, ""); print; exit
+      }
     ' \
     | sed -E 's/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/' \
     | sed -E 's/[[:space:]]+$//'
