@@ -21,11 +21,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+_found_but_not_exec=""
 for _cand in "${HOME}/.osac-ai-skills" "${WORKSPACE_ROOT}/.osac-ai-skills"; do
   if [[ -x "${_cand}/tools/resolve-remotes.sh" ]]; then
     exec "${_cand}/tools/resolve-remotes.sh" "$@"
+  elif [[ -f "${_cand}/tools/resolve-remotes.sh" ]]; then
+    _found_but_not_exec="${_cand}/tools/resolve-remotes.sh"
   fi
 done
+
+if [[ -n "$_found_but_not_exec" ]]; then
+  echo "error: ${_found_but_not_exec} exists but is not executable." >&2
+  echo "  Run: chmod +x ${_found_but_not_exec}" >&2
+  exit 1
+fi
 
 echo "error: resolve-remotes.sh not found in a vendored osac-ai-skills checkout (~/.osac-ai-skills or ${WORKSPACE_ROOT}/.osac-ai-skills)." >&2
 echo "  Run ./bootstrap.sh, then retry." >&2

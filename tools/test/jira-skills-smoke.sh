@@ -23,10 +23,16 @@ run_library_tests() {
 # --- Static checks on skill markdown ---
 
 test_skills_reference_shared_script() {
-  local skill
+  # Consumers either name the script directly (jira-task-management, the
+  # canonical skill) or link to the shared resolve-jira-safe-create.md
+  # reference (everyone else, since OSAC-4005's dedup) — either counts.
+  local skill file
   for skill in jira-task-management report-bug capture-tasks-from-meeting-notes osac-feature; do
-    grep -q 'jira-safe-create\.sh' "${ROOT}/skills/${skill}/SKILL.md" \
-      || fail "${skill}: missing jira-safe-create.sh reference"
+    file="${ROOT}/skills/${skill}/SKILL.md"
+    # osac-feature's sourcing logic lives in a nested reference, not SKILL.md
+    [[ "$skill" == "osac-feature" ]] && file="${ROOT}/skills/osac-feature/references/bash-patterns.md"
+    grep -Eq 'jira-safe-create\.sh|resolve-jira-safe-create\.md' "$file" \
+      || fail "${skill}: missing jira-safe-create.sh / resolve-jira-safe-create.md reference in ${file}"
     pass "${skill}: references shared script"
   done
 }
@@ -45,6 +51,7 @@ test_no_inline_create_in_examples() {
   local skill file line
   for skill in report-bug capture-tasks-from-meeting-notes osac-feature; do
     file="${ROOT}/skills/${skill}/SKILL.md"
+    [[ "$skill" == "osac-feature" ]] && file="${ROOT}/skills/osac-feature/references/bash-patterns.md"
     while IFS= read -r line; do
       # Skip prohibition / prose lines
       [[ "$line" == *'never '* ]] && continue
@@ -57,7 +64,7 @@ test_no_inline_create_in_examples() {
 }
 
 test_osac_feature_no_duplicate_helpers() {
-  if rg -q '^TEMP_FILES=\(\)' "${ROOT}/skills/osac-feature/SKILL.md"; then
+  if rg -q '^TEMP_FILES=\(\)' "${ROOT}/skills/osac-feature/SKILL.md" "${ROOT}/skills/osac-feature/references/bash-patterns.md"; then
     fail "osac-feature: inline TEMP_FILES block should be removed (use shared script)"
   fi
   pass "osac-feature: no duplicate temp helpers"
