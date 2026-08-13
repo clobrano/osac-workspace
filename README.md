@@ -40,7 +40,7 @@ cd osac-workspace
 
 The bootstrap script clones all OSAC repos into the workspace. Each repo is an independent Git repository on its `main` branch. By default, remotes are named `origin` (upstream) and `fork` (push target). Use `--fork-name <name>` to choose a different push remote name (e.g., `--fork-name origin` for the conventional layout where `origin` is your fork and `upstream` is the project repo).
 
-`tools/resolve-remotes.sh` detects remotes by URL, so all skills and hooks work regardless of naming.
+`resolve-remotes.sh` (vendored via `osac-ai-skills`, at `~/.osac-ai-skills` or `./.osac-ai-skills`) detects remotes by URL, so all skills and hooks work regardless of naming.
 
 Use `--no-fork` if you only need read-only access or are running in CI. To override fork repo names (e.g., if your fork of `docs` is named `osac-docs`), copy `fork-overrides.sh.example` to `fork-overrides.sh` and edit it.
 

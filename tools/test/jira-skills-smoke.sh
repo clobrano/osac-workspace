@@ -7,17 +7,25 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT=$(cd "${SCRIPT_DIR}/../.." && pwd)
-SOURCE="${ROOT}/tools/jira-safe-create.sh"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 pass() { echo "PASS: $*"; }
 
-[[ -f "$SOURCE" ]] || fail "missing $SOURCE"
+# jira-safe-create.sh is canonically hosted in osac-ai-skills (OSAC-4005) —
+# resolve it from whichever vendored checkout bootstrap.sh set up.
+VENDOR_DIR=""
+for _cand in "${HOME}/.osac-ai-skills" "${ROOT}/.osac-ai-skills"; do
+  [[ -f "${_cand}/tools/jira-safe-create.sh" ]] && { VENDOR_DIR="${_cand}"; break; }
+done
+[[ -n "$VENDOR_DIR" ]] || fail "jira-safe-create.sh not found in a vendored osac-ai-skills checkout (~/.osac-ai-skills or ${ROOT}/.osac-ai-skills). Run ./bootstrap.sh."
+SOURCE="${VENDOR_DIR}/tools/jira-safe-create.sh"
 
-# --- Library tests (tools/jira-safe-create.sh) ---
+# --- Library tests (vendored tools/jira-safe-create.sh) ---
+# The library's own unit tests live in osac-ai-skills now; re-run them here
+# against the vendored checkout as an integration check.
 
 run_library_tests() {
-  bash "${SCRIPT_DIR}/jira-safe-create-smoke.sh"
+  bash "${VENDOR_DIR}/tools/test/jira-safe-create-smoke.sh"
 }
 
 # --- Static checks on skill markdown ---
@@ -77,15 +85,26 @@ source_helpers() {
   source "$SOURCE"
 }
 
-test_source_from_git_root() {
+test_vendor_lookup_snippet_resolves() {
+  # Exercises the exact snippet documented in
+  # skills/jira-task-management/references/resolve-jira-safe-create.md,
+  # rather than the shortcut $SOURCE above, so drift between the doc and
+  # reality gets caught here.
   local resolved
   resolved=$(
-    cd "$ROOT" && source "$(git rev-parse --show-toplevel)/tools/jira-safe-create.sh"
-    new_temp smoke-root
-  )
-  [[ -n "$resolved" && -f "$resolved" ]] || fail "source via git rev-parse failed"
+    cd "$ROOT" || exit 1
+    REPO_DIR=$(git rev-parse --show-toplevel)
+    _jsc=""
+    for _cand in "${HOME}/.osac-ai-skills" "${REPO_DIR}/.osac-ai-skills"; do
+      [[ -f "${_cand}/tools/jira-safe-create.sh" ]] && { _jsc="${_cand}/tools/jira-safe-create.sh"; break; }
+    done
+    [[ -n "$_jsc" ]] || exit 1
+    source "$_jsc"
+    new_temp smoke-vendor-lookup
+  ) || fail "vendor-lookup snippet (resolve-jira-safe-create.md) failed to resolve+source"
+  [[ -n "$resolved" && -f "$resolved" ]] || fail "vendor-lookup snippet: new_temp produced no file"
   rm -f "$resolved"
-  pass "source via git rev-parse --show-toplevel"
+  pass "vendor-lookup snippet (resolve-jira-safe-create.md) resolves and sources correctly"
 }
 
 simulate_single_create() {
@@ -198,7 +217,7 @@ test_osac_feature_no_duplicate_helpers
 
 echo ""
 echo "=== skill create patterns (simulated) ==="
-test_source_from_git_root
+test_vendor_lookup_snippet_resolves
 test_jira_task_management_pattern
 test_report_bug_pattern
 test_meeting_notes_loop_pattern

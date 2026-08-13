@@ -57,7 +57,7 @@ a feature also spans a genuinely separate repo (e.g., `osac` + `osac-test-infra`
 ### Remotes
 - **Default names** from `bootstrap.sh`: `origin` = upstream osac-project repo, `fork` = developer fork
 - **Manual setups** may reverse these (e.g., `origin` = fork, `upstream` = osac-project)
-- Run `eval $(tools/resolve-remotes.sh <component-path>)` to resolve `$UPSTREAM_REMOTE` and `$PUSH_REMOTE` dynamically
+- Run the vendored `resolve-remotes.sh` (hosted in `osac-ai-skills`, at `~/.osac-ai-skills` or `./.osac-ai-skills`) to resolve `$UPSTREAM_REMOTE` and `$PUSH_REMOTE` dynamically — see `AGENTS.md` § Git Workflow for the lookup snippet
 
 ### Pushing and PR Submission
 

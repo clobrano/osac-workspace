@@ -24,8 +24,8 @@ Options:
   --no-fork          Clone directly from osac-project without forking.
                      Useful for read-only access or CI environments.
   --fork-name NAME   Name for the push remote (default: fork).
-                     Use any name you prefer — tools/resolve-remotes.sh
-                     detects remotes by URL, not by name.
+                     Use any name you prefer — the vendored osac-ai-skills
+                     resolve-remotes.sh detects remotes by URL, not by name.
   --help             Show this help message.
 
 Prerequisites:
