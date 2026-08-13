@@ -29,6 +29,10 @@ make rebuild                   # Rebuild image from scratch
 
 Install Go, Node.js, buf, kubectl, kind, jira CLI, gh CLI, jq directly.
 
+### Option C: Local Kind cluster (`kind-dev/`)
+
+Full OSAC stack on a single-node kind cluster (KubeVirt, AWX, Keycloak, PostgreSQL) — read [`kind-dev/README.md`](kind-dev/README.md) for setup, architecture, prerequisites, and dev helpers (`dev_push`, `dev_logs`, `dev_token` via `source kind-dev/helpers.sh`).
+
 ### Bootstrap
 
 ```bash
