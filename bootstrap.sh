@@ -354,7 +354,7 @@ if [ -d "${HOME}/.osac-ai-skills" ] && osac_ai_skills_vendor_ok "${HOME}/.osac-a
     echo "⚠️  Rebase failed for osac-ai-skills. Resolve manually: cd $OSAC_AI_SKILLS_DIR && git rebase origin/main"
     UPDATE_WARNINGS=1
   fi
-elif [ -d ".osac-ai-skills" ]; then
+elif [ -d ".osac-ai-skills" ] && osac_ai_skills_vendor_ok ".osac-ai-skills"; then
   OSAC_AI_SKILLS_DIR="$(pwd)/.osac-ai-skills"
   echo "📦 Updating osac-ai-skills (.osac-ai-skills)..."
   if ! (cd "$OSAC_AI_SKILLS_DIR" && git fetch origin); then
@@ -365,6 +365,13 @@ elif [ -d ".osac-ai-skills" ]; then
     echo "⚠️  Rebase failed for osac-ai-skills. Resolve manually: cd $OSAC_AI_SKILLS_DIR && git rebase origin/main"
     UPDATE_WARNINGS=1
   fi
+elif [ -d ".osac-ai-skills" ]; then
+  # Same gate as the ~/.osac-ai-skills branch above -- without it, a stale or
+  # non-git ./.osac-ai-skills would hit `git fetch` directly and fail with a
+  # confusing "Fetch failed" instead of this actionable message.
+  echo "❌ .osac-ai-skills exists but is not a usable vendor checkout (expected a git clone with skills/ and an executable tools/link-agent-skills.sh)."
+  echo "   Remove or rename it, then re-run bootstrap.sh to clone a fresh copy."
+  exit 1
 else
   if [ -d "${HOME}/.osac-ai-skills" ]; then
     echo "⚠️  ${HOME}/.osac-ai-skills exists but is not a usable vendor checkout; using ./.osac-ai-skills"
@@ -405,11 +412,27 @@ else
   echo "📥 Cloning ai-workflows..."
   git clone "https://github.com/${AI_WORKFLOWS_REPO}.git" ".ai-workflows"
 fi
+# Must run before ai-workflows' install.sh: on a from-scratch clone, nothing
+# under .claude/, .cursor/, or .gemini/ exists yet, so link-agent-skills.sh
+# can freely create the .claude/skills -> ../skills (etc.) umbrella symlinks.
+# install.sh's own `mkdir -p "<agent>/skills"` + targeted `ln -sfn .../<wf>`
+# calls are non-destructive against an existing directory symlink -- they
+# follow it and land each ai-workflows entry inside the shared skills/ tree.
+# Reversing this order breaks a from-scratch bootstrap: install.sh would
+# create .claude/skills (etc.) as a real directory first, and safe_symlink
+# refuses to replace a real directory with a symlink.
+#
+# Export the vendor dir this script just resolved/updated/cloned above so the
+# wrapper uses that exact directory instead of independently re-resolving one
+# -- the wrapper's own resolve_osac_ai_skills_dir() has no way to know this
+# script already rejected a stale/invalid ~/.osac-ai-skills or .osac-ai-skills
+# in favor of the other, and could otherwise silently link skills from a
+# different vendor than the one just fetched/rebased/cloned.
+echo "🔗 Linking agent skill directories to skills/..."
+OSAC_AI_SKILLS_VENDOR_DIR="${OSAC_AI_SKILLS_DIR}" tools/link-agent-skills.sh --all
 echo "🔧 Installing ai-workflows skills..."
 AI_WORKFLOWS="bugfix,implement,prd,design,e2e"
 "$AI_WORKFLOWS_DIR/install.sh" all --project . --workflows "$AI_WORKFLOWS"
-echo "🔗 Linking agent skill directories to skills/..."
-tools/link-agent-skills.sh --all
 
 if command -v rh-multi-pre-commit &>/dev/null; then
   echo ""
