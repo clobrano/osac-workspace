@@ -139,7 +139,11 @@ Example: `OSAC-356: fix VM namespace lookup when subnetRef is set`
 
 ## Step 7: Push and Create PR
 
-Resolve remotes first: `_out=$(tools/resolve-remotes.sh <repo-path>) && eval "$_out"`
+Resolve remotes first (script is vendored via `osac-ai-skills`, at `~/.osac-ai-skills` or `./.osac-ai-skills`):
+
+```bash
+for _d in "$HOME/.osac-ai-skills" "./.osac-ai-skills"; do [[ -x "$_d/tools/resolve-remotes.sh" ]] && { eval "$("$_d/tools/resolve-remotes.sh" <repo-path>)"; break; }; done
+```
 
 ```bash
 git push -u "$PUSH_REMOTE" <branch-name>
