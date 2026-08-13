@@ -69,6 +69,24 @@ seed_vendor() {
       echo "# stub ${name}" >"${vendor}/skills/${name}/SKILL.md"
     fi
   done
+
+  # Shared rules/agents/design-context (OSAC-4006): stub the same filenames
+  # the vendored script's SHARED_RULES/SHARED_AGENTS/SHARED_DESIGN_CONTEXT
+  # arrays expect, so materialize_shared_dir has real files to link to.
+  # reference/*.md (ARCHITECTURE.md and siblings) is NOT part of this
+  # fan-out — it's a codebase-analysis snapshot, not portable skill
+  # guidance; placement deferred to OSAC-4008. reference/ stays a real,
+  # workspace-local directory, untouched by this script.
+  mkdir -p "${vendor}/.claude/rules" "${vendor}/.claude/agents" "${vendor}/.design/context"
+  for name in architecture-patterns networking-design-alignment request-path-tracing; do
+    echo "# stub ${name}" >"${vendor}/.claude/rules/${name}.md"
+  done
+  for name in quick-fix; do
+    echo "# stub ${name}" >"${vendor}/.claude/agents/${name}.md"
+  done
+  for name in enclave-wizard-pipeline networking-decisions osac-dimensions review-patterns; do
+    echo "# stub ${name}" >"${vendor}/.design/context/${name}.md"
+  done
 }
 
 install_wrapper() {
@@ -121,6 +139,29 @@ test_materialize_and_link() {
   pass "materialize + vendored fan-out links consumer tree"
 }
 
+test_shared_rules_agents_design_context() {
+  local ws
+  ws=$(mktemp -d "${TMPDIR_ROOT}/shared.XXXXXX")
+  seed_vendor "$ws"
+  install_wrapper "$ws"
+
+  run_wrapper "$ws" --claude >/dev/null
+
+  [[ -L "${ws}/.claude/rules/architecture-patterns.md" ]] \
+    || fail "expected .claude/rules/architecture-patterns.md to be a symlink"
+  [[ -r "${ws}/.claude/rules/architecture-patterns.md" ]] \
+    || fail "cannot read .claude/rules/architecture-patterns.md via symlink"
+  [[ -L "${ws}/.claude/agents/quick-fix.md" ]] \
+    || fail "expected .claude/agents/quick-fix.md to be a symlink"
+  [[ -r "${ws}/.claude/agents/quick-fix.md" ]] \
+    || fail "cannot read .claude/agents/quick-fix.md via symlink"
+  [[ -L "${ws}/.design/context/osac-dimensions.md" ]] \
+    || fail "expected .design/context/osac-dimensions.md to be a symlink"
+  [[ -r "${ws}/.design/context/osac-dimensions.md" ]] \
+    || fail "cannot read .design/context/osac-dimensions.md via symlink"
+  pass "materializes shared rules/agents/design-context"
+}
+
 test_refuse_real_skill_directory() {
   local ws
   ws=$(mktemp -d "${TMPDIR_ROOT}/refuse.XXXXXX")
@@ -157,9 +198,36 @@ test_prunes_removed_vendor_skill() {
   pass "prunes stale vendor skill symlinks"
 }
 
+test_verify_rejects_removed_canonical_file() {
+  local ws
+  ws=$(mktemp -d "${TMPDIR_ROOT}/verify-removed.XXXXXX")
+  seed_vendor "$ws"
+  install_wrapper "$ws"
+
+  run_wrapper "$ws" --claude >/dev/null
+  run_wrapper "$ws" --claude --verify >/dev/null \
+    || fail "expected --verify to pass before canonical file removal"
+
+  # Simulate a canonical shared rule vanishing out from under an
+  # otherwise-present consumer symlink (e.g. mid-migration deletion).
+  rm -f "${ws}/.osac-ai-skills/.claude/rules/architecture-patterns.md"
+  [[ -L "${ws}/.claude/rules/architecture-patterns.md" ]] \
+    || fail "expected stale symlink to remain after canonical file removal"
+
+  local rc=0
+  local err
+  err=$(run_wrapper "$ws" --claude --verify 2>&1) || rc=$?
+  [[ "$rc" -ne 0 ]] || fail "expected --verify to fail after canonical file removal"
+  echo "$err" | grep -qi 'missing or unreadable' \
+    || fail "expected missing-canonical-source error, got: $err"
+  pass "--verify rejects a symlink whose canonical file was removed"
+}
+
 test_missing_vendor_fails
 test_materialize_and_link
+test_shared_rules_agents_design_context
 test_refuse_real_skill_directory
 test_prunes_removed_vendor_skill
+test_verify_rejects_removed_canonical_file
 
 echo "All link-agent-skills consumer smoke tests passed."
