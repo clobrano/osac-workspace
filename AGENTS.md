@@ -106,11 +106,11 @@ make deploy IMG=<registry>/osac-operator:tag
 
 Fork-based push rules, branch naming, DCO sign-off, AI attribution, and PR
 title conventions are generic across any OSAC repo — see the shared
-`dev-conventions` rule (`.claude/rules/dev-conventions.md`, centralized in
-`osac-ai-skills`) for the full detail; summarized in Critical Rules above.
-`resolve-remotes.sh` (referenced there) is canonically hosted in
-`osac-ai-skills`, vendored at `~/.osac-ai-skills` or `./.osac-ai-skills`
-(whichever `bootstrap.sh` set up).
+`dev-conventions` guidance centralized in `osac-ai-skills` for the full
+detail; summarized in Critical Rules above. `resolve-remotes.sh`
+(referenced there) is canonically hosted in `osac-ai-skills`, vendored at
+`~/.osac-ai-skills` or `./.osac-ai-skills` (whichever `bootstrap.sh` set
+up).
 
 ### Cross-Component Changes
 
@@ -181,9 +181,8 @@ For features involving the fulfillment-service API (proto definitions, services,
 
 ## Jira Conventions
 
-See the shared `dev-conventions` rule (`.claude/rules/dev-conventions.md`) —
-Jira Tasks-not-Stories terminology and `jira` CLI usage are generic across
-any OSAC repo, not workspace-specific.
+See the shared `dev-conventions` rule — Jira Tasks-not-Stories terminology
+and `jira` CLI usage are generic across any OSAC repo, not workspace-specific.
 
 ## AI-Assisted Workflows
 
