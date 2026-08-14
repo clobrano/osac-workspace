@@ -1,3 +1,1 @@
-# Hooks
-
-This directory contains hook scripts for Claude Code workflows.
+/Users/tohughes/workspace/osac-workspace/.osac-ai-skills/.claude/hooks/README.md

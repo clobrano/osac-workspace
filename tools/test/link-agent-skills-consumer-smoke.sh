@@ -70,19 +70,22 @@ seed_vendor() {
     fi
   done
 
-  # Shared rules/agents/design-context (OSAC-4006): stub the same filenames
-  # the vendored script's SHARED_RULES/SHARED_AGENTS/SHARED_DESIGN_CONTEXT
-  # arrays expect, so materialize_shared_dir has real files to link to.
-  # reference/*.md (ARCHITECTURE.md and siblings) is NOT part of this
-  # fan-out — it's a codebase-analysis snapshot, not portable skill
-  # guidance; placement deferred to OSAC-4008. reference/ stays a real,
+  # Shared rules/agents/hooks/design-context (OSAC-4006): stub the same
+  # filenames the vendored script's SHARED_RULES/SHARED_AGENTS/SHARED_HOOKS/
+  # SHARED_DESIGN_CONTEXT arrays expect, so materialize_shared_dir has real
+  # files to link to. reference/*.md (ARCHITECTURE.md and siblings) is NOT
+  # part of this fan-out — it's a codebase-analysis snapshot, not portable
+  # skill guidance; placement deferred to OSAC-4008. reference/ stays a real,
   # workspace-local directory, untouched by this script.
-  mkdir -p "${vendor}/.claude/rules" "${vendor}/.claude/agents" "${vendor}/.design/context"
-  for name in architecture-patterns networking-design-alignment request-path-tracing; do
+  mkdir -p "${vendor}/.claude/rules" "${vendor}/.claude/agents" "${vendor}/.claude/hooks" "${vendor}/.design/context"
+  for name in architecture-patterns networking-design-alignment request-path-tracing dev-conventions; do
     echo "# stub ${name}" >"${vendor}/.claude/rules/${name}.md"
   done
   for name in quick-fix; do
     echo "# stub ${name}" >"${vendor}/.claude/agents/${name}.md"
+  done
+  for name in README; do
+    echo "# stub hooks ${name}" >"${vendor}/.claude/hooks/${name}.md"
   done
   for name in enclave-wizard-pipeline networking-decisions osac-dimensions review-patterns; do
     echo "# stub ${name}" >"${vendor}/.design/context/${name}.md"
@@ -155,11 +158,15 @@ test_shared_rules_agents_design_context() {
     || fail "expected .claude/agents/quick-fix.md to be a symlink"
   [[ -r "${ws}/.claude/agents/quick-fix.md" ]] \
     || fail "cannot read .claude/agents/quick-fix.md via symlink"
+  [[ -L "${ws}/.claude/hooks/README.md" ]] \
+    || fail "expected .claude/hooks/README.md to be a symlink"
+  [[ -r "${ws}/.claude/hooks/README.md" ]] \
+    || fail "cannot read .claude/hooks/README.md via symlink"
   [[ -L "${ws}/.design/context/osac-dimensions.md" ]] \
     || fail "expected .design/context/osac-dimensions.md to be a symlink"
   [[ -r "${ws}/.design/context/osac-dimensions.md" ]] \
     || fail "cannot read .design/context/osac-dimensions.md via symlink"
-  pass "materializes shared rules/agents/design-context"
+  pass "materializes shared rules/agents/hooks/design-context"
 }
 
 test_refuse_real_skill_directory() {
