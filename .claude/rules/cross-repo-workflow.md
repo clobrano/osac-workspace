@@ -49,32 +49,20 @@ a feature also spans a genuinely separate repo (e.g., `osac` + `osac-test-infra`
 
 ## Git Workflow
 
-### Branching
-
-- **Always create a feature branch** for any work — never commit directly to `main`
-- Branch naming: `<type>/<ticket-or-description>` (e.g., `feat/OSAC-23607`, `fix/duplicate-aap-jobs`)
+Branch naming, fork-based push rules, DCO sign-off, AI attribution, and PR
+title conventions are generic across any OSAC repo (not cross-repo-specific)
+— see the shared `dev-conventions` rule (`.claude/rules/dev-conventions.md`,
+centralized in `osac-ai-skills`) for those. This section covers only what's
+genuinely specific to coordinating *across* `osac-workspace`'s component
+repos:
 
 ### Remotes
+
 - **Default names** from `bootstrap.sh`: `origin` = upstream osac-project repo, `fork` = developer fork
 - **Manual setups** may reverse these (e.g., `origin` = fork, `upstream` = osac-project)
-- Run the vendored `resolve-remotes.sh` (hosted in `osac-ai-skills`, at `~/.osac-ai-skills` or `./.osac-ai-skills`) to resolve `$UPSTREAM_REMOTE` and `$PUSH_REMOTE` dynamically — see `AGENTS.md` § Git Workflow for the lookup snippet
+- Run the vendored `resolve-remotes.sh` (hosted in `osac-ai-skills`, at `~/.osac-ai-skills` or `./.osac-ai-skills`) to resolve `$UPSTREAM_REMOTE` and `$PUSH_REMOTE` dynamically — see `dev-conventions.md` for the lookup snippet
 
 ### Pushing and PR Submission
 
-- **Always push to `$PUSH_REMOTE`**, never to `$UPSTREAM_REMOTE`
 - PRs go from the push remote's branch to the upstream repo's `main`
-- Always include the Jira ticket key in the PR title (e.g., "OSAC-12345: fix subnet race condition")
 - **Use the `create-pr` skill** (`/create-pr`) to run repo-specific validation, push, and create the PR
-
-### Commit Conventions
-
-- Sign off all commits with DCO: `git commit -s`
-- Add AI attribution trailer when AI-assisted, naming whichever tool did the
-  work — never `Co-Authored-By`:
-  ```text
-  Assisted-by: <tool> <contact>
-  ```
-  Example for Claude Code:
-  ```text
-  Assisted-by: Claude Code <noreply@anthropic.com>
-  ```

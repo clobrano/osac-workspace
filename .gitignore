@@ -32,6 +32,13 @@ kubeconfig
 .claude/rules/architecture-patterns.md
 .claude/rules/networking-design-alignment.md
 .claude/rules/request-path-tracing.md
+.claude/rules/dev-conventions.md
+
+# Shared hook documentation vendored via osac-ai-skills (OSAC-4006): symlink
+# materialized by tools/link-agent-skills.sh, not committed. The actual hook
+# scripts (update-ai-context.sh, statusline.sh) are workspace-specific
+# executables and stay real, tracked files — only the generic README.md moved.
+.claude/hooks/README.md
 
 # Shared design-context content vendored via osac-ai-skills (OSAC-4006):
 # symlinks materialized by tools/link-agent-skills.sh, not committed.

@@ -10,8 +10,11 @@
 
 ## Detailed Rules (auto-loaded from `.claude/rules/`)
 
-- **`cross-repo-workflow.md`** — Git worktrees, cross-component changes, PR rules
-- **`architecture-patterns.md`** — Multi-tenancy, resource hierarchy, service stack, integration testing
+- **`cross-repo-workflow.md`** — Git worktrees, cross-component changes, remotes and PR mechanics (workspace-authored, workspace-local)
+- **`architecture-patterns.md`** — Multi-tenancy, resource hierarchy, service stack, integration testing (centralized in `osac-ai-skills`, symlinked)
+- **`networking-design-alignment.md`** — Networking design/implementation alignment triggers (centralized in `osac-ai-skills`, symlinked)
+- **`request-path-tracing.md`** — Request path tracing conventions (centralized in `osac-ai-skills`, symlinked)
+- **`dev-conventions.md`** — Branch naming, fork-based push rules, DCO sign-off, AI attribution, Jira conventions (centralized in `osac-ai-skills`, symlinked)
 
 ## Claude Command Syntax
 

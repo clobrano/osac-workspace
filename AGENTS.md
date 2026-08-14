@@ -7,7 +7,7 @@ Meta-workspace that bootstraps all OSAC (Open Sovereign AI Cloud) component repo
 - **`osac-workspace/` is the project root** — all work happens from here; component docs are loaded via progressive disclosure
 - **Never skip tenant isolation metadata** (`osac.openshift.io/tenant`, `osac.openshift.io/owner-reference` annotations) in new resources
 - **Always `buf lint` before committing** proto changes; regenerate with `buf generate`
-- **Fork-based workflow**: push to `$PUSH_REMOTE`, never to `$UPSTREAM_REMOTE` — resolve via the vendored `resolve-remotes.sh` (see [Git Workflow](#git-workflow) below)
+- **Fork-based workflow**: push to `$PUSH_REMOTE`, never to `$UPSTREAM_REMOTE` — resolve via the vendored `resolve-remotes.sh` (full detail in the shared `dev-conventions` rule, see [Git Workflow](#git-workflow) below)
 - **AI attribution**: use an `Assisted-by: <tool> <contact>` trailer on commits, naming whichever AI tool actually did the work — never use `Co-Authored-By` for AI tools (Red Hat attribution standard). Example for Claude Code: `Assisted-by: Claude Code <noreply@anthropic.com>`
 - When debugging Kubernetes operators, check for stale vendor directories and cached images before rebuilding
 - **Edit OSAC skills only in [`osac-project/osac-ai-skills`](https://github.com/osac-project/osac-ai-skills)** — this workspace vendors them via `./bootstrap.sh`; do not treat local `skills/` as an editable source
@@ -104,15 +104,13 @@ make deploy IMG=<registry>/osac-operator:tag
 
 ### Git Workflow
 
-- **Fork-based**: push to `$PUSH_REMOTE`, never to `$UPSTREAM_REMOTE`
-- **Branch naming**: `<type>/<ticket-or-description>` (e.g., `feat/OSAC-23607`, `fix/duplicate-aap-jobs`)
-- **Resolve remotes**: `resolve-remotes.sh` is canonically hosted in `osac-ai-skills`, vendored at `~/.osac-ai-skills` or `./.osac-ai-skills` (whichever `bootstrap.sh` set up) — locate it, then run it to set `$UPSTREAM_REMOTE` and `$PUSH_REMOTE`:
-  ```bash
-  for d in "$HOME/.osac-ai-skills" "./.osac-ai-skills"; do [[ -x "$d/tools/resolve-remotes.sh" ]] && { RR="$d/tools/resolve-remotes.sh"; break; }; done
-  eval "$("$RR" <component-path>)"
-  ```
-- **DCO sign-off**: `git commit -s` on all commits
-- **AI attribution**: `Assisted-by: <tool> <contact>` trailer, naming whichever AI tool actually did the work — never `Co-Authored-By` for AI tools. Example for Claude Code: `Assisted-by: Claude Code <noreply@anthropic.com>`
+Fork-based push rules, branch naming, DCO sign-off, AI attribution, and PR
+title conventions are generic across any OSAC repo — see the shared
+`dev-conventions` guidance centralized in `osac-ai-skills` for the full
+detail; summarized in Critical Rules above. `resolve-remotes.sh`
+(referenced there) is canonically hosted in `osac-ai-skills`, vendored at
+`~/.osac-ai-skills` or `./.osac-ai-skills` (whichever `bootstrap.sh` set
+up).
 
 ### Cross-Component Changes
 
@@ -183,8 +181,8 @@ For features involving the fulfillment-service API (proto definitions, services,
 
 ## Jira Conventions
 
-- OSAC uses Jira **Tasks** (not Stories) for implementation work — in the **implement** workflow, "story" references mean Tasks in this project
-- Use `jira` CLI for Jira access (e.g., `jira issue view OSAC-1234 --plain`), not Jira MCP
+See the shared `dev-conventions` rule — Jira Tasks-not-Stories terminology
+and `jira` CLI usage are generic across any OSAC repo, not workspace-specific.
 
 ## AI-Assisted Workflows
 
