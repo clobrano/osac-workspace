@@ -1,1 +1,0 @@
-/Users/tohughes/workspace/osac-workspace/.osac-ai-skills/.claude/hooks/README.md
