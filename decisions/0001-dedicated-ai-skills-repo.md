@@ -427,21 +427,109 @@ precise one than `osac-ai-tooling` would have been for the broader content.
   `osac-workspace`.** "Once we're sure development from within `osac/` is
   100%" needs to become a checkable list before it can actually trigger
   action. At minimum, this needs: (a) the new skills repo live and vendored
-  successfully by `osac/`'s bootstrap; (b) `osac-workspace`'s root context
+  successfully by `osac/`'s bootstrap; **(b) `osac-workspace`'s root context
   (`AGENTS.md`/`CLAUDE.md`) reconciled into `osac/`'s own, since they've
-  evolved independently and don't just concatenate; (c) a decided new home
+  evolved independently and don't just concatenate — resolved, mostly, by
+  OSAC-4006 (2026-08-14); see the two dedicated bullets below for the full
+  account, including what's still landing via OSAC-3957 rather than fully
+  closed here;** (c) a decided new home
   for `osac-workspace`'s live PR-dashboard site, which has nothing to do
   with skills and needs its own resolution; (d) a decision on whether
   `osac-workspace`'s dev-container tooling (`Containerfile`, distrobox
   `Makefile` targets) is ported to `osac/` or intentionally dropped; (e) a
   decided placement for `osac-workspace`'s cross-repo `reference/` docs,
   which describe the multi-repo ecosystem as a whole rather than any one
-  component; (f) a decided placement for `decisions/` itself (this ADR
+  component — **still open, explicitly deferred in full to
+  [OSAC-4008](https://redhat.atlassian.net/browse/OSAC-4008) by OSAC-4006,
+  including `reference/ARCHITECTURE.md`, which OSAC-4006 briefly centralized
+  into `osac-ai-skills` and then reverted (see the resolution bullets below
+  for why) — all seven `reference/*.md` files stay one consistent,
+  still-undecided batch**; (f) a decided placement for `decisions/` itself
+  (this ADR
   history, plus [0002](0002-osac-ui-monorepo-consolidation.md) and
   whatever accumulates alongside it) — deliberately not moved into
   `osac-ai-skills` by Decision item 1, so it needs its own resolution
   before `osac-workspace` can go away, not just a default "it goes wherever
   skills went."
+- **Resolved (mostly) — exit criterion (b), root context reconciliation
+  (OSAC-4006, 2026-08-14).** Every file under `osac-workspace`'s non-skill
+  `.claude/{hooks,rules,settings.json,agents}`, `.design/context/`, and root
+  `CLAUDE.md`/`AGENTS.md` got an explicit, documented placement decision —
+  full per-file/section decision matrix and rationale lives in
+  `osac-workspace`'s `.artifacts/implement/OSAC-4006/02-plan.md` (a local
+  working doc, not itself committed — this record captures the durable
+  precedent). Landed across four merged PRs:
+  [osac-ai-skills#5](https://github.com/osac-project/osac-ai-skills/pull/5),
+  [osac-workspace#211](https://github.com/osac-project/osac-workspace/pull/211),
+  [osac#322](https://github.com/osac-project/osac/pull/322),
+  [osac-workspace#212](https://github.com/osac-project/osac-workspace/pull/212).
+  **"Mostly" because two pieces remain, both consolidated into
+  [OSAC-3957](https://redhat.atlassian.net/browse/OSAC-3957)'s draft
+  [osac#307](https://github.com/osac-project/osac/pull/307) rather than a
+  second `osac/` PR from OSAC-4006 racing to edit the same files**: `osac/`'s
+  three real `.claude/rules/` files (added by `OSAC-3557`) need deleting
+  before that PR's own fan-out script can materialize the symlinks it needs
+  to add; and `osac/AGENTS.md`/`fulfillment-service/AGENTS.md` need the
+  product-architecture content OSAC-4006 specified but didn't itself land.
+  Cross-links: [OSAC-4007](https://redhat.atlassian.net/browse/OSAC-4007)
+  (agent-leftover cleanup — its `.claude/agents/quick-fix.md` disposition is
+  resolved by the item below, not orphaned); OSAC-4008 gets its own bullet
+  next, since it's a peer resolution, not a footnote to this one.
+- **New precedent — outcome (d), centralize genuinely portable content in
+  `osac-ai-skills` itself, not just in `osac/` (OSAC-4006, 2026-08-14).**
+  Content that's generic across *any* consumer, not scoped to one product
+  repo, now has a fourth home distinct from the three named in Decision item
+  1 (skill files, skillsaw config, eval harness): shared `.claude/rules/`
+  (`architecture-patterns.md`, `networking-design-alignment.md`,
+  `request-path-tracing.md`, `dev-conventions.md`), the
+  `.claude/agents/quick-fix.md` agent definition, `.claude/hooks/README.md`,
+  and `.design/context/*.md` all live as canonical files in `osac-ai-skills`,
+  fanned out to consumers as per-file symlinks by an extended
+  `tools/link-agent-skills.sh` (`materialize_shared_dir`, parameterized by
+  directory + file list — a few-line addition per new shared file or
+  bucket, not new plumbing). This resolves
+  [OSAC-4008](https://redhat.atlassian.net/browse/OSAC-4008)'s "Group A" for
+  the two originally-named `.design/context/` files. **One file was
+  deliberately reverted from this pattern after a closer look**:
+  `reference/ARCHITECTURE.md` was briefly centralized here too, then pulled
+  back out — it's a `.planning/codebase/`-tool-generated codebase-analysis
+  snapshot of `osac/`'s own internals (same origin/tooling as its six
+  `reference/*.md` siblings, which stayed workspace-local throughout), not
+  portable guidance, and it substantially duplicated hand-maintained content
+  that's the actual source of truth
+  (`fulfillment-service/AGENTS.md`/`osac-operator/AGENTS.md`'s own
+  `## Architecture` sections) with no sync mechanism back to it. Centralizing
+  an auto-generated analysis snapshot in a skills-authoring repo would
+  disconnect it from the code changes that invalidate it — a different
+  failure mode than the hand-authored rules/agent/context content this
+  outcome is actually suited for. `reference/*.md` placement (all seven
+  files, `ARCHITECTURE.md` included) stays exit criterion (e), fully
+  deferred to OSAC-4008 as one consistent decision.
+- **New pattern — accepted, intentional duplication with a
+  decommission-triggered end date, distinct from outcome (d) (OSAC-4006,
+  2026-08-14).** Not every piece of reconciled content should converge to a
+  single copy *right now*. `osac-workspace`'s root-doc product content
+  (`Architecture`, `Common Fix Locations`, `OpenShift Deployment`, plus the
+  inherently cross-repo `Repository Structure`/`Build and Test` matrix, `UI
+  Reference`, `Enhancement Proposals` config, `Deployment Coordination`, and
+  `cross-repo-workflow.md`'s worktree/remotes/PR-sequencing mechanics) stays
+  real and fully live in `osac-workspace`, indefinitely — it is *not* trimmed
+  down to cross-repo-only scope and pointed at `osac/`'s copies once those
+  exist via osac#307, which was the original plan. Rationale: Decision item 4
+  already commits to `osac-workspace` staying "just as functional" as `osac/`
+  for the whole transition window, not degrading incrementally as `osac/`
+  catches up — and unlike the outcome-(d) content above, there's no symlink
+  or fan-out mechanism that can keep two independent repos' prose in sync in
+  real time, so "reconciled" here means *documented as intentional*, not
+  *deduplicated on disk*. The duplication resolves itself completely, with
+  zero residual drift risk, the moment `osac-workspace` is decommissioned
+  outright (exit criterion becomes moot once the repo holding the duplicate
+  copy no longer exists) — trimming it piecemeal beforehand would only add
+  navigation friction for `osac-workspace` users in exchange for closing a
+  low-stakes, self-resolving, and temporary drift risk on docs content. This
+  is the one case in OSAC-4006 where AC-2 ("no content exists in both repos
+  without being intentionally synced or deduplicated") is satisfied by the
+  first half of that sentence, not the second.
 - **Open follow-up — protection strategy for the new skills repo.** OSAC's
   baseline expectation here is the same one used everywhere else in this
   ecosystem: a human reviews and approves a change before it merges —
@@ -647,3 +735,20 @@ precise one than `osac-ai-tooling` would have been for the broader content.
   separate `skills/` and `commands/` directories; a sampled command
   wrapper (`prd/commands/ingest.md`) is a short, static, relative-path
   pointer file, not project-templated content
+- [OSAC-4006](https://redhat.atlassian.net/browse/OSAC-4006) (implemented
+  2026-08-13/14) and its local plan doc,
+  `osac-workspace/.artifacts/implement/OSAC-4006/02-plan.md` (not itself
+  committed) — full per-file/section decision matrix for exit criterion (b),
+  the outcome-(d) centralization precedent, the accepted-duplication pattern,
+  and the reasoning behind reverting `reference/ARCHITECTURE.md` out of
+  `osac-ai-skills` — basis for the three new Consequences bullets above
+- [osac-ai-skills#5](https://github.com/osac-project/osac-ai-skills/pull/5),
+  [osac-workspace#211](https://github.com/osac-project/osac-workspace/pull/211),
+  [osac#322](https://github.com/osac-project/osac/pull/322),
+  [osac-workspace#212](https://github.com/osac-project/osac-workspace/pull/212)
+  (all merged) — the four PRs that implemented OSAC-4006's resolved scope
+- [OSAC-3957](https://redhat.atlassian.net/browse/OSAC-3957) and its draft
+  [osac#307](https://github.com/osac-project/osac/pull/307) — the
+  consolidated landing point for exit criterion (b)'s remaining scope
+  (`osac/`'s stale-rules symlink cutover plus the root-doc content OSAC-4006
+  specified but deferred rather than landing as a second, racing `osac/` PR)
