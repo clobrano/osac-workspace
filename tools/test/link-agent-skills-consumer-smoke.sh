@@ -90,6 +90,12 @@ seed_vendor() {
   for name in enclave-wizard-pipeline networking-decisions osac-dimensions review-patterns; do
     echo "# stub ${name}" >"${vendor}/.design/context/${name}.md"
   done
+
+  # Design/PRD template section-guidance (OSAC-4008): same materialize_shared_dir
+  # mechanism as design-context above, stubbed the same way.
+  mkdir -p "${vendor}/.design/templates" "${vendor}/.prd/templates"
+  echo "# stub design section-guidance" >"${vendor}/.design/templates/section-guidance.md"
+  echo "# stub prd section-guidance" >"${vendor}/.prd/templates/section-guidance.md"
 }
 
 install_wrapper() {
@@ -166,7 +172,15 @@ test_shared_rules_agents_design_context() {
     || fail "expected .design/context/osac-dimensions.md to be a symlink"
   [[ -r "${ws}/.design/context/osac-dimensions.md" ]] \
     || fail "cannot read .design/context/osac-dimensions.md via symlink"
-  pass "materializes shared rules/agents/hooks/design-context"
+  [[ -L "${ws}/.design/templates/section-guidance.md" ]] \
+    || fail "expected .design/templates/section-guidance.md to be a symlink"
+  [[ -r "${ws}/.design/templates/section-guidance.md" ]] \
+    || fail "cannot read .design/templates/section-guidance.md via symlink"
+  [[ -L "${ws}/.prd/templates/section-guidance.md" ]] \
+    || fail "expected .prd/templates/section-guidance.md to be a symlink"
+  [[ -r "${ws}/.prd/templates/section-guidance.md" ]] \
+    || fail "cannot read .prd/templates/section-guidance.md via symlink"
+  pass "materializes shared rules/agents/hooks/design-context/design-templates/prd-templates"
 }
 
 test_refuse_real_skill_directory() {
