@@ -220,7 +220,7 @@ test_prunes_removed_vendor_skill() {
 }
 
 test_verify_rejects_removed_canonical_file() {
-  local ws
+  local ws canonical_rel symlink_rel
   ws=$(mktemp -d "${TMPDIR_ROOT}/verify-removed.XXXXXX")
   seed_vendor "$ws"
   install_wrapper "$ws"
@@ -229,19 +229,32 @@ test_verify_rejects_removed_canonical_file() {
   run_wrapper "$ws" --claude --verify >/dev/null \
     || fail "expected --verify to pass before canonical file removal"
 
-  # Simulate a canonical shared rule vanishing out from under an
+  # Simulate a canonical shared file vanishing out from under an
   # otherwise-present consumer symlink (e.g. mid-migration deletion).
-  rm -f "${ws}/.osac-ai-skills/.claude/rules/architecture-patterns.md"
-  [[ -L "${ws}/.claude/rules/architecture-patterns.md" ]] \
-    || fail "expected stale symlink to remain after canonical file removal"
+  # Covers one bucket from each of the three materialize_shared_dir
+  # call sites (OSAC-4006's .claude/rules, and OSAC-4008's two new
+  # .design/templates and .prd/templates buckets) so --verify's
+  # missing-canonical-source check is proven for every bucket family,
+  # not just the first one it was written against.
+  for canonical_rel in \
+    ".claude/rules/architecture-patterns.md:.claude/rules/architecture-patterns.md" \
+    ".design/templates/section-guidance.md:.design/templates/section-guidance.md" \
+    ".prd/templates/section-guidance.md:.prd/templates/section-guidance.md"; do
+    symlink_rel="${canonical_rel#*:}"
+    canonical_rel="${canonical_rel%%:*}"
 
-  local rc=0
-  local err
-  err=$(run_wrapper "$ws" --claude --verify 2>&1) || rc=$?
-  [[ "$rc" -ne 0 ]] || fail "expected --verify to fail after canonical file removal"
-  echo "$err" | grep -qi 'missing or unreadable' \
-    || fail "expected missing-canonical-source error, got: $err"
-  pass "--verify rejects a symlink whose canonical file was removed"
+    rm -f "${ws}/.osac-ai-skills/${canonical_rel}"
+    [[ -L "${ws}/${symlink_rel}" ]] \
+      || fail "expected stale symlink to remain after removing canonical ${canonical_rel}"
+
+    local rc=0
+    local err
+    err=$(run_wrapper "$ws" --claude --verify 2>&1) || rc=$?
+    [[ "$rc" -ne 0 ]] || fail "expected --verify to fail after removing canonical ${canonical_rel}"
+    echo "$err" | grep -qi 'missing or unreadable' \
+      || fail "expected missing-canonical-source error for ${canonical_rel}, got: $err"
+  done
+  pass "--verify rejects a symlink whose canonical file was removed (rules, design templates, prd templates)"
 }
 
 test_vendor_override_env_var_is_authoritative() {
