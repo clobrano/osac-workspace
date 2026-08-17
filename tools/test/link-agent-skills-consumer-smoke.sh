@@ -253,6 +253,14 @@ test_verify_rejects_removed_canonical_file() {
     [[ "$rc" -ne 0 ]] || fail "expected --verify to fail after removing canonical ${canonical_rel}"
     echo "$err" | grep -qi 'missing or unreadable' \
       || fail "expected missing-canonical-source error for ${canonical_rel}, got: $err"
+
+    # Restore all canonical files before the next iteration so each bucket's
+    # removal is isolated -- without this, a later iteration's --verify
+    # failure could be caused by this iteration's still-missing file instead
+    # of proving that specific bucket's own removal independently.
+    seed_vendor "$ws"
+    run_wrapper "$ws" --claude --verify >/dev/null \
+      || fail "expected --verify to pass again after restoring canonical ${canonical_rel}"
   done
   pass "--verify rejects a symlink whose canonical file was removed (rules, design templates, prd templates)"
 }
