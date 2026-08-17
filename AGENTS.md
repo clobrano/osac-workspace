@@ -176,8 +176,9 @@ For features involving the fulfillment-service API (proto definitions, services,
 ### Template Overrides
 
 - Design template: `enhancement-proposals/guidelines/design_template.md` (EP format with PRD-aware modifications)
-- Design section guidance: `.design/templates/section-guidance.md` — stays local; hand-synced with `design_template.md`
+- Design section guidance: `.design/templates/section-guidance.md` — vendored via `osac-ai-skills` (OSAC-4008), symlinked in by `tools/link-agent-skills.sh`; edit in `osac-ai-skills`, not here. Hand-synced with `design_template.md`.
 - PRD template: `enhancement-proposals/guidelines/prd_template.md` (user stories by persona, In Scope/Out of Scope instead of FR-N/NFR-N)
+- PRD section guidance: `.prd/templates/section-guidance.md` — same vendoring as the design section guidance above; hand-synced with `prd_template.md`.
 
 ## Jira Conventions
 

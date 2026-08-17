@@ -90,6 +90,12 @@ seed_vendor() {
   for name in enclave-wizard-pipeline networking-decisions osac-dimensions review-patterns; do
     echo "# stub ${name}" >"${vendor}/.design/context/${name}.md"
   done
+
+  # Design/PRD template section-guidance (OSAC-4008): same materialize_shared_dir
+  # mechanism as design-context above, stubbed the same way.
+  mkdir -p "${vendor}/.design/templates" "${vendor}/.prd/templates"
+  echo "# stub design section-guidance" >"${vendor}/.design/templates/section-guidance.md"
+  echo "# stub prd section-guidance" >"${vendor}/.prd/templates/section-guidance.md"
 }
 
 install_wrapper() {
@@ -166,7 +172,15 @@ test_shared_rules_agents_design_context() {
     || fail "expected .design/context/osac-dimensions.md to be a symlink"
   [[ -r "${ws}/.design/context/osac-dimensions.md" ]] \
     || fail "cannot read .design/context/osac-dimensions.md via symlink"
-  pass "materializes shared rules/agents/hooks/design-context"
+  [[ -L "${ws}/.design/templates/section-guidance.md" ]] \
+    || fail "expected .design/templates/section-guidance.md to be a symlink"
+  [[ -r "${ws}/.design/templates/section-guidance.md" ]] \
+    || fail "cannot read .design/templates/section-guidance.md via symlink"
+  [[ -L "${ws}/.prd/templates/section-guidance.md" ]] \
+    || fail "expected .prd/templates/section-guidance.md to be a symlink"
+  [[ -r "${ws}/.prd/templates/section-guidance.md" ]] \
+    || fail "cannot read .prd/templates/section-guidance.md via symlink"
+  pass "materializes shared rules/agents/hooks/design-context/design-templates/prd-templates"
 }
 
 test_refuse_real_skill_directory() {
@@ -206,7 +220,7 @@ test_prunes_removed_vendor_skill() {
 }
 
 test_verify_rejects_removed_canonical_file() {
-  local ws
+  local ws canonical_rel symlink_rel
   ws=$(mktemp -d "${TMPDIR_ROOT}/verify-removed.XXXXXX")
   seed_vendor "$ws"
   install_wrapper "$ws"
@@ -215,19 +229,40 @@ test_verify_rejects_removed_canonical_file() {
   run_wrapper "$ws" --claude --verify >/dev/null \
     || fail "expected --verify to pass before canonical file removal"
 
-  # Simulate a canonical shared rule vanishing out from under an
+  # Simulate a canonical shared file vanishing out from under an
   # otherwise-present consumer symlink (e.g. mid-migration deletion).
-  rm -f "${ws}/.osac-ai-skills/.claude/rules/architecture-patterns.md"
-  [[ -L "${ws}/.claude/rules/architecture-patterns.md" ]] \
-    || fail "expected stale symlink to remain after canonical file removal"
+  # Covers one bucket from each of the three materialize_shared_dir
+  # call sites (OSAC-4006's .claude/rules, and OSAC-4008's two new
+  # .design/templates and .prd/templates buckets) so --verify's
+  # missing-canonical-source check is proven for every bucket family,
+  # not just the first one it was written against.
+  for canonical_rel in \
+    ".claude/rules/architecture-patterns.md:.claude/rules/architecture-patterns.md" \
+    ".design/templates/section-guidance.md:.design/templates/section-guidance.md" \
+    ".prd/templates/section-guidance.md:.prd/templates/section-guidance.md"; do
+    symlink_rel="${canonical_rel#*:}"
+    canonical_rel="${canonical_rel%%:*}"
 
-  local rc=0
-  local err
-  err=$(run_wrapper "$ws" --claude --verify 2>&1) || rc=$?
-  [[ "$rc" -ne 0 ]] || fail "expected --verify to fail after canonical file removal"
-  echo "$err" | grep -qi 'missing or unreadable' \
-    || fail "expected missing-canonical-source error, got: $err"
-  pass "--verify rejects a symlink whose canonical file was removed"
+    rm -f "${ws}/.osac-ai-skills/${canonical_rel}"
+    [[ -L "${ws}/${symlink_rel}" ]] \
+      || fail "expected stale symlink to remain after removing canonical ${canonical_rel}"
+
+    local rc=0
+    local err
+    err=$(run_wrapper "$ws" --claude --verify 2>&1) || rc=$?
+    [[ "$rc" -ne 0 ]] || fail "expected --verify to fail after removing canonical ${canonical_rel}"
+    echo "$err" | grep -qi 'missing or unreadable' \
+      || fail "expected missing-canonical-source error for ${canonical_rel}, got: $err"
+
+    # Restore all canonical files before the next iteration so each bucket's
+    # removal is isolated -- without this, a later iteration's --verify
+    # failure could be caused by this iteration's still-missing file instead
+    # of proving that specific bucket's own removal independently.
+    seed_vendor "$ws"
+    run_wrapper "$ws" --claude --verify >/dev/null \
+      || fail "expected --verify to pass again after restoring canonical ${canonical_rel}"
+  done
+  pass "--verify rejects a symlink whose canonical file was removed (rules, design templates, prd templates)"
 }
 
 test_vendor_override_env_var_is_authoritative() {
