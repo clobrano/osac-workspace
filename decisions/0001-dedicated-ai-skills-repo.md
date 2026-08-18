@@ -439,12 +439,14 @@ precise one than `osac-ai-tooling` would have been for the broader content.
   `Makefile` targets) is ported to `osac/` or intentionally dropped; (e) a
   decided placement for `osac-workspace`'s cross-repo `reference/` docs,
   which describe the multi-repo ecosystem as a whole rather than any one
-  component — **still open, explicitly deferred in full to
-  [OSAC-4008](https://redhat.atlassian.net/browse/OSAC-4008) by OSAC-4006,
-  including `reference/ARCHITECTURE.md`, which OSAC-4006 briefly centralized
-  into `osac-ai-skills` and then reverted (see the resolution bullets below
-  for why) — all seven `reference/*.md` files stay one consistent,
-  still-undecided batch**; (f) a decided placement for `decisions/` itself
+  component — **resolved by [OSAC-4008](https://redhat.atlassian.net/browse/OSAC-4008)
+  (2026-08-18): two of the seven `reference/*.md` files — `ARCHITECTURE.md`
+  (which OSAC-4006 had briefly centralized into `osac-ai-skills` and then
+  reverted) and `CONVENTIONS.md` — were trimmed and relocated to
+  `osac/docs/`, symlinked back from `osac-workspace` for existing
+  consumers; the other five were deleted as unused — see the dedicated
+  Consequences bullet below for the full account**; (f) a decided placement
+  for `decisions/` itself
   (this ADR
   history, plus [0002](0002-osac-ui-monorepo-consolidation.md) and
   whatever accumulates alongside it) — deliberately not moved into
@@ -475,6 +477,59 @@ precise one than `osac-ai-tooling` would have been for the broader content.
   (agent-leftover cleanup — its `.claude/agents/quick-fix.md` disposition is
   resolved by the item below, not orphaned); OSAC-4008 gets its own bullet
   next, since it's a peer resolution, not a footnote to this one.
+- **Resolved — exit criterion (e), `reference/*.md` placement
+  ([OSAC-4008](https://redhat.atlassian.net/browse/OSAC-4008), 2026-08-18).**
+  Of the seven `reference/*.md` files, only two had any live reader:
+  `ARCHITECTURE.md` (read by the `design-review`/`prd-review` skills) and
+  `CONVENTIONS.md` (its "Cross-Repo Dependencies" table, pointed at by this
+  repo's own `AGENTS.md`). Both were trimmed to only their
+  non-duplicative, still-referenced content — dropping the substantial
+  overlap with `fulfillment-service/AGENTS.md`'s and
+  `osac-operator/AGENTS.md`'s own, more-current `## Architecture` sections,
+  the same duplication concern behind the `reference/ARCHITECTURE.md`
+  revert described in the outcome-(d) bullet below, whose actual complaint
+  was landing in a skills-authoring repo, not landing co-located with the
+  code it analyzes — and relocated to `osac/docs/`, matching `osac/`'s existing
+  per-component `docs/` naming convention
+  (`fulfillment-service/docs/`, `osac-operator/docs/`, etc.).
+  `osac-workspace`'s `reference/ARCHITECTURE.md`/`CONVENTIONS.md` became
+  same-path relative symlinks into `osac/docs/`, so `design-review`/
+  `prd-review` and this repo's own `AGENTS.md` pointer keep working with
+  zero further changes to those files. The other five
+  (`CONCERNS.md`, `INTEGRATIONS.md`, `STACK.md`, `STRUCTURE.md`,
+  `TESTING.md`) had zero live consumers anywhere in the workspace and were
+  deleted outright rather than relocated. This also surfaced
+  `osac-workspace/.ai-bot/instructions.md` as itself vestigial — superseded
+  by `osac/.ai-bot/instructions.md`'s self-contained content since
+  OSAC-3487 consolidated per-component bot configs into `osac/`'s repo
+  root — deleted in the same cleanup. **One caveat carried forward, not
+  closed by this resolution:** the regeneration mechanism for the pre-trim
+  `reference/*.md` snapshots was never confirmed (no `.planning/`-tooling
+  command was located during this ticket's investigation);
+  `osac/docs/README.md` flags this explicitly as TBD, and any future
+  regeneration must re-apply this trim rather than overwrite the relocated
+  files wholesale. Landed across two merged PRs:
+  [osac#364](https://github.com/osac-project/osac/pull/364),
+  [osac-workspace#217](https://github.com/osac-project/osac-workspace/pull/217).
+  Full per-file disposition and rationale in `osac-workspace`'s
+  `.artifacts/implement/OSAC-4008/02-plan.md` (a local working doc, not
+  itself committed — this record captures the durable precedent).
+- **Extension of outcome (d) — design/prd template-guidance
+  centralization, bundled with the same ticket but not itself part of
+  exit criterion (e) ([OSAC-4008](https://redhat.atlassian.net/browse/OSAC-4008),
+  2026-08-18).** The design/prd template-override section guidance
+  (`.design/templates/section-guidance.md`,
+  `.prd/templates/section-guidance.md`) was centralized in `osac-ai-skills`,
+  extending the exact `materialize_shared_dir` fan-out the outcome-(d)
+  bullet below already proved for `.design/context/*.md`. Worth being
+  precise that this doesn't gate `osac-workspace`'s decommission the way
+  the `reference/*.md` bullet above does — exit criterion (e) has only ever
+  been about cross-repo `reference/` docs placement; this landed in the
+  same Jira ticket for shared implementation reasons (same fan-out
+  mechanism, same PR-sequencing concerns), not because it was a named exit
+  criterion itself. Landed across two merged PRs:
+  [osac-ai-skills#8](https://github.com/osac-project/osac-ai-skills/pull/8),
+  [osac-workspace#216](https://github.com/osac-project/osac-workspace/pull/216).
 - **New precedent — outcome (d), centralize genuinely portable content in
   `osac-ai-skills` itself, not just in `osac/` (OSAC-4006, 2026-08-14).**
   Content that's generic across *any* consumer, not scoped to one product
@@ -504,7 +559,8 @@ precise one than `osac-ai-tooling` would have been for the broader content.
   failure mode than the hand-authored rules/agent/context content this
   outcome is actually suited for. `reference/*.md` placement (all seven
   files, `ARCHITECTURE.md` included) stays exit criterion (e), fully
-  deferred to OSAC-4008 as one consistent decision.
+  deferred to OSAC-4008 as one consistent decision — see the dedicated
+  exit-criterion (e) bullet above for how OSAC-4008 actually resolved it.
 - **New pattern — accepted, intentional duplication with a
   decommission-triggered end date, distinct from outcome (d) (OSAC-4006,
   2026-08-14).** Not every piece of reconciled content should converge to a
@@ -752,3 +808,14 @@ precise one than `osac-ai-tooling` would have been for the broader content.
   consolidated landing point for exit criterion (b)'s remaining scope
   (`osac/`'s stale-rules symlink cutover plus the root-doc content OSAC-4006
   specified but deferred rather than landing as a second, racing `osac/` PR)
+- [OSAC-4008](https://redhat.atlassian.net/browse/OSAC-4008) (implemented
+  2026-08-17/18) and its local plan doc,
+  `osac-workspace/.artifacts/implement/OSAC-4008/02-plan.md` (not itself
+  committed) — full per-file disposition for all seven `reference/*.md`
+  files and the `.ai-bot/` cleanup, plus the design/prd template-guidance
+  centralization — basis for the exit-criterion (e) resolution bullet above
+- [osac-ai-skills#8](https://github.com/osac-project/osac-ai-skills/pull/8),
+  [osac#364](https://github.com/osac-project/osac/pull/364),
+  [osac-workspace#216](https://github.com/osac-project/osac-workspace/pull/216),
+  [osac-workspace#217](https://github.com/osac-project/osac-workspace/pull/217)
+  (all merged) — the four PRs that implemented OSAC-4008's resolved scope
