@@ -37,7 +37,7 @@ Kind lives in the `osac` mono-repo, under `osac-installer/` (no Makefile at the 
 make -C osac/osac-installer install PLATFORM=kind PROFILE=dev NS=osac
 ```
 
-Parameters, infra-only/uninstall, `/etc/hosts`, and test suites: [`osac/osac-installer/AGENTS.md`](osac/osac-installer/AGENTS.md).
+Infra-only, uninstall, `/etc/hosts`, and test suites: [`osac/fulfillment-service/AGENTS.md`](osac/fulfillment-service/AGENTS.md) (Integration Tests).
 
 ### Bootstrap
 
