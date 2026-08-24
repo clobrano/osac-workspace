@@ -31,7 +31,7 @@ Install Go, Node.js, buf, kubectl, kind, jira CLI, gh CLI, jq directly.
 
 ### Option C: Local Kind cluster
 
-Kind is owned by `osac-installer`. From the workspace root:
+Kind lives in the `osac` mono-repo, under `osac-installer/` (no Makefile at the `osac/` root). From this workspace:
 
 ```bash
 make -C osac/osac-installer install PLATFORM=kind PROFILE=dev NS=osac
