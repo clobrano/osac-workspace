@@ -95,7 +95,7 @@ This workspace has no build step of its own. Each component repo documents build
 cd osac/fulfillment-service
 go build ./...                        # Build
 ginkgo run -r internal                # Unit tests (excludes integration)
-# Integration tests: osac/osac-installer/AGENTS.md (Kind section)
+# Integration tests: AGENTS.md (Integration Tests)
 make -C ../osac-installer test PLATFORM=kind PROFILE=dev NS=osac SUITE=fulfillment
 buf lint && buf generate              # Proto lint + codegen
 
