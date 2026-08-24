@@ -29,9 +29,22 @@ make rebuild                   # Rebuild image from scratch
 
 Install Go, Node.js, buf, kubectl, kind, jira CLI, gh CLI, jq directly.
 
-### Option C: Local Kind cluster (`kind-dev/`)
+### Option C: Local Kind cluster (`osac/osac-installer`)
 
-Full OSAC stack on a single-node kind cluster (KubeVirt, AWX, Keycloak, PostgreSQL) — read [`kind-dev/README.md`](kind-dev/README.md) for setup, architecture, prerequisites, and dev helpers (`dev_push`, `dev_logs`, `dev_token` via `source kind-dev/helpers.sh`).
+Full OSAC stack on a single-node Kind cluster (`osac-dev`) via the installer Makefile. `PLATFORM`, `PROFILE`, and `NS` are required (no defaults). Kind only supports `PROFILE=dev`.
+
+```bash
+# Full stack (infra + OSAC)
+make -C osac/osac-installer install PLATFORM=kind PROFILE=dev NS=osac
+
+# Infra only (for component integration tests)
+make -C osac/osac-installer install-infra PLATFORM=kind PROFILE=dev NS=osac
+
+# Tear down (deletes the Kind cluster)
+make -C osac/osac-installer uninstall PLATFORM=kind PROFILE=dev NS=osac
+```
+
+See [`osac/osac-installer/AGENTS.md`](osac/osac-installer/AGENTS.md). Requires `/etc/hosts` entries for `keycloak.keycloak.svc.cluster.local`, `fulfillment-api.osac.svc.cluster.local`, and `fulfillment-internal-api.osac.svc.cluster.local`.
 
 ### Bootstrap
 
@@ -89,8 +102,10 @@ This workspace has no build step of its own. Each component repo documents build
 cd osac/fulfillment-service
 go build ./...                        # Build
 ginkgo run -r internal                # Unit tests (excludes integration)
-ginkgo run it                         # Integration tests (requires kind)
-IT_KEEP_KIND=true ginkgo run it       # Preserve kind cluster for debugging
+# Integration tests — Kind cluster via osac-installer (PLATFORM/PROFILE/NS required)
+make -C ../osac-installer install-infra PLATFORM=kind PROFILE=dev NS=osac
+make -C ../osac-installer test PLATFORM=kind PROFILE=dev NS=osac SUITE=fulfillment
+make -C ../osac-installer uninstall PLATFORM=kind PROFILE=dev NS=osac
 buf lint && buf generate              # Proto lint + codegen
 
 # osac/osac-operator

@@ -6,10 +6,10 @@
 #
 # Inside the container, Claude Code and all dev tools are available.
 #
-# Rootful podman (required for kind-dev/setup.sh):
+# Rootful podman (required for Kind via osac-installer):
 #   On the host, run once:
 #     sudo install -d /etc/systemd/system/podman.socket.d
-#     sudo install -m 0644 kind-dev/podman-socket-rootful.conf \
+#     sudo install -m 0644 tools/distrobox/podman-socket-rootful.conf \
 #       /etc/systemd/system/podman.socket.d/rootful-group.conf
 #     sudo chgrp wheel /run/podman && sudo chmod 710 /run/podman
 #     sudo systemctl daemon-reload && sudo systemctl restart podman.socket
@@ -98,5 +98,5 @@ RUN pip3 install --no-cache-dir pytest ansible \
 # --- podman wrapper (delegates to host via distrobox-host-exec) ---
 # Supports rootful mode: set PODMAN_ROOTFUL=1 to use the system podman socket.
 # Requires the host to have the socket group override installed (see header).
-COPY osac/kind-dev/podman-wrapper.sh /usr/local/bin/podman
+COPY tools/distrobox/podman-wrapper.sh /usr/local/bin/podman
 RUN chmod +x /usr/local/bin/podman
