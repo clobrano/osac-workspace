@@ -6,13 +6,9 @@
 #
 # Inside the container, Claude Code and all dev tools are available.
 #
-# Rootful podman (required for Kind via osac-installer):
-#   On the host, run once:
-#     sudo install -d /etc/systemd/system/podman.socket.d
-#     sudo install -m 0644 tools/distrobox/podman-socket-rootful.conf \
-#       /etc/systemd/system/podman.socket.d/rootful-group.conf
-#     sudo chgrp wheel /run/podman && sudo chmod 710 /run/podman
-#     sudo systemctl daemon-reload && sudo systemctl restart podman.socket
+# Host-podman for Kind-from-Distrobox is not bundled here. The old
+# kind-dev wrapper was deleted with osac/kind-dev; port or drop that
+# tooling under OSAC-4010 when Distrobox moves to the osac mono-repo.
 
 # Fedora 42 — pinned to digest; bump with: skopeo inspect docker://registry.fedoraproject.org/fedora:42
 FROM registry.fedoraproject.org/fedora@sha256:63773f454664cd77e239f8e0b13ae7f18effe9e3d6612a325b5646eb3bda11f1
@@ -94,9 +90,3 @@ RUN set -e \
 # --- Language-level packages (pip, npm) ---
 RUN pip3 install --no-cache-dir pytest ansible \
     && npm install -g @anthropic-ai/claude-code
-
-# --- podman wrapper (delegates to host via distrobox-host-exec) ---
-# Supports rootful mode: set PODMAN_ROOTFUL=1 to use the system podman socket.
-# Requires the host to have the socket group override installed (see header).
-COPY tools/distrobox/podman-wrapper.sh /usr/local/bin/podman
-RUN chmod +x /usr/local/bin/podman
