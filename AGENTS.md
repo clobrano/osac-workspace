@@ -29,22 +29,15 @@ make rebuild                   # Rebuild image from scratch
 
 Install Go, Node.js, buf, kubectl, kind, jira CLI, gh CLI, jq directly.
 
-### Option C: Local Kind cluster (`osac/osac-installer`)
+### Option C: Local Kind cluster
 
-Full OSAC stack on a single-node Kind cluster (`osac-dev`) via the installer Makefile. `PLATFORM`, `PROFILE`, and `NS` are required (no defaults). Kind only supports `PROFILE=dev`.
+Kind is owned by `osac-installer`. From the workspace root:
 
 ```bash
-# Full stack (infra + OSAC)
 make -C osac/osac-installer install PLATFORM=kind PROFILE=dev NS=osac
-
-# Infra only (for component integration tests)
-make -C osac/osac-installer install-infra PLATFORM=kind PROFILE=dev NS=osac
-
-# Tear down (deletes the Kind cluster)
-make -C osac/osac-installer uninstall PLATFORM=kind PROFILE=dev NS=osac
 ```
 
-See [`osac/osac-installer/AGENTS.md`](osac/osac-installer/AGENTS.md). Requires `/etc/hosts` entries for `keycloak.keycloak.svc.cluster.local`, `fulfillment-api.osac.svc.cluster.local`, and `fulfillment-internal-api.osac.svc.cluster.local`.
+Parameters, infra-only/uninstall, `/etc/hosts`, and test suites: [`osac/osac-installer/AGENTS.md`](osac/osac-installer/AGENTS.md).
 
 ### Bootstrap
 
@@ -102,10 +95,8 @@ This workspace has no build step of its own. Each component repo documents build
 cd osac/fulfillment-service
 go build ./...                        # Build
 ginkgo run -r internal                # Unit tests (excludes integration)
-# Integration tests — Kind cluster via osac-installer (PLATFORM/PROFILE/NS required)
-make -C ../osac-installer install-infra PLATFORM=kind PROFILE=dev NS=osac
+# Integration tests: osac/osac-installer/AGENTS.md (Kind section)
 make -C ../osac-installer test PLATFORM=kind PROFILE=dev NS=osac SUITE=fulfillment
-make -C ../osac-installer uninstall PLATFORM=kind PROFILE=dev NS=osac
 buf lint && buf generate              # Proto lint + codegen
 
 # osac/osac-operator
