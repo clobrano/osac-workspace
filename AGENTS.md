@@ -29,9 +29,15 @@ make rebuild                   # Rebuild image from scratch
 
 Install Go, Node.js, buf, kubectl, kind, jira CLI, gh CLI, jq directly.
 
-### Option C: Local Kind cluster (`kind-dev/`)
+### Option C: Local Kind cluster
 
-Full OSAC stack on a single-node kind cluster (KubeVirt, AWX, Keycloak, PostgreSQL) — read [`kind-dev/README.md`](kind-dev/README.md) for setup, architecture, prerequisites, and dev helpers (`dev_push`, `dev_logs`, `dev_token` via `source kind-dev/helpers.sh`).
+Kind lives in the `osac` mono-repo, under `osac-installer/` (no Makefile at the `osac/` root). From this workspace:
+
+```bash
+make -C osac/osac-installer install PLATFORM=kind PROFILE=dev NS=osac
+```
+
+Infra-only, uninstall, `/etc/hosts`, and test suites: [`osac/fulfillment-service/AGENTS.md`](osac/fulfillment-service/AGENTS.md) (Integration Tests).
 
 ### Bootstrap
 
@@ -89,8 +95,8 @@ This workspace has no build step of its own. Each component repo documents build
 cd osac/fulfillment-service
 go build ./...                        # Build
 ginkgo run -r internal                # Unit tests (excludes integration)
-ginkgo run it                         # Integration tests (requires kind)
-IT_KEEP_KIND=true ginkgo run it       # Preserve kind cluster for debugging
+# Integration tests: AGENTS.md (Integration Tests)
+make -C ../osac-installer test PLATFORM=kind PROFILE=dev NS=osac SUITE=fulfillment
 buf lint && buf generate              # Proto lint + codegen
 
 # osac/osac-operator
